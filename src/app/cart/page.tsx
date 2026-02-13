@@ -235,9 +235,25 @@ export default function page() {
                                                             <h3 className="text-xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors">
                                                                 {getItems.products.name}
                                                             </h3>
-                                                            <p className="mt-2 text-2xl font-bold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                                                                {getItems.products.price} EGP
-                                                            </p>
+                                                            <div className="flex items-baseline gap-2 mb-4">
+                                                                {getItems.products.original_price - getItems.products.price === 0 ? (
+                                                                    <span className="text-3xl font-bold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                                                                        {getItems.products.original_price}
+                                                                    </span>
+                                                                ) : (
+                                                                    <>
+                                                                        <span className="text-xl font-medium text-gray-400 line-through">
+                                                                            {getItems.products.original_price}
+                                                                        </span>
+                                                                        <span className="text-2xl font-bold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                                                                            {getItems.products.price}
+                                                                        </span>
+                                                                    </>
+                                                                )}
+                                                                <span className="text-lg font-semibold text-gray-600">
+                                                                    EGP
+                                                                </span>
+                                                            </div>
                                                         </div>
 
                                                         {/* Quantity Controls */}

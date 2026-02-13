@@ -220,9 +220,20 @@ export default function page() {
                                         {/* Price Section */}
                                         <div className="mt-auto">
                                             <div className="flex items-baseline gap-2 mb-4">
-                                                <span className="text-3xl font-bold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                                                    {item.products.price}
-                                                </span>
+                                                {item.products.original_price - item.products.price === 0 ? (
+                                                    <span className="text-3xl font-bold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                                                        {item.products.original_price}
+                                                    </span>
+                                                ) : (
+                                                    <>
+                                                        <span className="text-xl font-medium text-gray-400 line-through">
+                                                            {item.products.original_price}
+                                                        </span>
+                                                        <span className="text-3xl font-bold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                                                            {item.products.price}
+                                                        </span>
+                                                    </>
+                                                )}
                                                 <span className="text-lg font-semibold text-gray-600">
                                                     EGP
                                                 </span>

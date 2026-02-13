@@ -9,7 +9,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useSession } from "next-auth/react"
 import { useState } from "react"
 import toast from "react-hot-toast"
-import { createOrders } from "../app/apis-actions/orders/orders"
 import { useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 
@@ -84,36 +83,50 @@ export default function CheckoutForm({ clientSecret }: { clientSecret: string })
             return
         }
 
+        // const { error, paymentIntent } = await stripe.confirmPayment({
+        //     elements,
+        //     redirect: "if_required",
+        // })
+
+        // if (error) {
+        //     toast.error(error.message || "Payment failed")
+        //     setLoading(false)
+        //     return
+        // }
+
+        // if (paymentIntent?.status === "succeeded") {
+
+        //     await fetch("/api/orders", {
+        //         method: "POST",
+        //         headers: { "Content-Type": "application/json" },
+        //         body: JSON.stringify({
+        //             user_id,
+        //             address_id,
+        //             promo_id,
+        //             payment_intent_id: paymentIntent.id,
+        //         }),
+        //     })
+
+        //     await supabase
+        //         .from("cart_items")
+        //         .delete()
+        //         .eq("user_id", user_id)
+
+        //     toast.success("Payment successful 🎉")
+        // }
+
         const { error } = await stripe.confirmPayment({
             elements,
             confirmParams: {
-                return_url: `${window.location.origin}/success`,
+                return_url: window.location.origin + "/success", // بعد الدفع
             },
         })
-        console.log("CONFIRM RESULT:", { error })
-
 
         if (error) {
-            toast.error(error.message || "Payment failed")
-            setLoading(false)
-            return
+            console.error(error)
+            toast.error("error in checkout form")
         }
 
-        await createOrders({
-            user_id,
-            address_id,
-            payment_method: "card",
-            promo_code_id: promo_id
-        })
-
-        await supabase
-            .from("cart_items")
-            .delete()
-            .eq("user_id", user_id)
-
-
-        toast.success("Payment successful 🎉")
-        setLoading(false)
     }
 
 

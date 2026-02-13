@@ -13,6 +13,7 @@ import { createOrders } from "../apis-actions/orders/orders"
 import { useSearchParams } from "next/navigation"
 import { getAddress } from "../apis-actions/address/address"
 import { getCheckoutPreview } from "../apis-actions/checkout/preview/preview"
+import { clearCart } from "../apis-actions/cart/cart"
 
 export default function CheckoutPage() {
     const [clientSecret, setClientSecret] = useState<string | null>(null)
@@ -34,6 +35,14 @@ export default function CheckoutPage() {
         },
         onError: () => {
             toast.error("Failed to place order")
+        }
+    })
+
+    const { isPending: clearCartPending, mutate: clearCartMutate } = useMutation({
+        mutationFn: clearCart,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["getCart", user_id] }),
+                toast.success("Your cart cleared successfully")
         }
     })
 
@@ -105,96 +114,43 @@ export default function CheckoutPage() {
     //     iniitCheckout()
     // }, [cartTotal, user_id])
 
-    // useEffect(() => {
-    //     if (hasInitialized.current) return;
-
-    //     hasInitialized.current = true;
-    //     async function initCheckout() {
-    //         try {
-    //             console.log("ORDER DATA =>", {
-    //                 user_id,
-    //                 address_id: "573039e4-67df-44da-b0d1-3262d73f486b",
-    //                 payment_method: "card",
-    //                 promo_code_id: promoFromUrl && promoFromUrl !== "" ? promoFromUrl : null
-    //             })
-    //             const data = await createOrders({
-    //                 user_id,
-    //                 address_id: address.id,
-    //                 payment_method: "card",
-    //                 promo_code_id: promoFromUrl && promoFromUrl !== "" ? promoFromUrl : null
-    //             })
-
-    //             if (!data?.clientSecret) {
-    //                 throw new Error("No client secret returned")
-    //             }
-
-    //             setClientSecret(data.clientSecret)
-    //         } catch (err) {
-    //             console.error("Checkout error:", err)
-    //             toast.error("Failed to initialize checkout")
-    //         }
-    //     }
-
-    //     initCheckout()
-    // }, [user_id, address])
-
-    // useEffect(() => {
-    //     if (!user_id || !address?.length) return
-    //     if (hasInitialized.current) return
-
-    //     hasInitialized.current = true
-
-    //     async function initCheckout() {
-    //         try {
-    //             const data = await createOrders({
-    //                 user_id,
-    //                 address_id: address[0].id,
-    //                 payment_method: "card",
-    //                 promo_code_id: promoFromUrl ?? null
-    //             })
-
-    //             if (!data?.clientSecret) {
-    //                 throw new Error("No client secret returned")
-    //             }
-
-    //             setClientSecret(data.clientSecret)
-    //         } catch (err) {
-    //             console.error("Checkout error:", err)
-    //             toast.error("Failed to initialize checkout")
-    //         }
-    //     }
-
-    //     initCheckout()
-    // }, [user_id, address])
-
 
     useEffect(() => {
-        if (!preview?.total) return  // لو preview لسه فاضي، ما تعملش حاجة
+        if (!user_id) return
+        if (!address?.length) return
+        if (clientSecret) return
+        if (hasInitialized.current) return;
 
-        async function createIntent() {
+        hasInitialized.current = true;
+
+        async function initPaymentIntent() {
             try {
-                const res = await fetch("/api/payment-intent", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ amount: preview.total, user_id })
+                const data = await createOrders({
+                    user_id,
+                    address_id: address[0].id,
+                    payment_method: "card",
+                    promo_code_id: promoFromUrl ?? null
                 })
 
-                const data = await res.json()
+                clearCartMutate(user_id)
+
+                if (!data?.clientSecret) {
+                    throw new Error("No client secret returned from backend")
+                }
+
                 setClientSecret(data.clientSecret)
+                console.log("Stripe ClientSecret:", data.clientSecret)
             } catch (err) {
-                console.error("Failed to create payment intent:", err)
-                toast.error("Failed to initialize checkout")
+                console.error("Checkout init error:", err)
+                toast.error("error in completing payment")
             }
         }
 
-        createIntent()
-    }, [preview])
+        initPaymentIntent()
+    }, [user_id, address, promoFromUrl, clientSecret])
 
-    console.log("preview show", preview)
+    if (!address || !clientSecret) return <Loading />
 
-    if (!preview) {
-        return <Loading />
-    }
 
 
     return (
