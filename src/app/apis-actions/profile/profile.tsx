@@ -23,12 +23,12 @@ export async function createProfile(payload: Profile) {
     return res.json()
 }
 
-export async function updateProfile(payload: Profile) {
+export async function updateProfile(full_name: string, phone: string , avatar_url : string) {
     const res = await fetch(`/api/profile`, {
         method: "PUT",
         cache: "no-store",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ full_name, phone , avatar_url })
     })
 
     return res.json()

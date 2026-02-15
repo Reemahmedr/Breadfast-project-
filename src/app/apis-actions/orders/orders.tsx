@@ -15,6 +15,21 @@ export async function getOrders(user_id: string) {
     const data = await res.json()
     return Array.isArray(data) ? data : []
 }
+
+export async function getRecentOrders(user_id: string) {
+    const res = await fetch(`/api/orders?user_id=${user_id}`, {
+        cache: "no-store"
+    })
+
+    const data = await res.json()
+
+    if (!Array.isArray(data)) return []
+
+    return data.slice(0, 3) 
+}
+
+
+
 export async function createOrders(order_item: Order) {
     const res = await fetch("/api/orders", {
         method: "POST",

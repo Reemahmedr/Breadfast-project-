@@ -14,6 +14,7 @@ export async function GET() {
             { status: 401 }
         );
     }
+
     const { data: profile, error: profileError } = await supabaseServer
         .from("profiles")
         .select("*")
@@ -77,11 +78,13 @@ export async function POST(req: Request) {
 
     const body = await req.json()
 
-    const { full_name, phone, avatar_url } = body
+    const { full_name, phone } = body
+
+    const avatarUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(full_name)}&backgroundColor=FCF2F9&textColor=6B21A8`
 
     const { data, error } = await supabaseServer
         .from("profiles")
-        .insert([{ id: userId, full_name, phone, avatar_url }])
+        .insert([{ id: userId, full_name, phone, avatar_url: avatarUrl }])
         .select()
 
     if (error) {

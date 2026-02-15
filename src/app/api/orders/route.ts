@@ -1,20 +1,26 @@
 import { stripe } from "@/lib/stripe";
 import { supabaseServer } from "@/lib/supabase-server";
+import { authOptions } from "@/src/auth";
+import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 
-export async function GET(req: Request) {
-    const { searchParams } = new URL(req.url)
-    const userId = searchParams.get("user_id")
+export async function GET() {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
     if (!userId) {
-        return NextResponse.json({ error: "user_id is required" }, { status: 400 });
+        return NextResponse.json(
+            { error: "Not authenticated" },
+            { status: 401 }
+        );
     }
 
     const { data, error } = await supabaseServer
         .from("orders")
         .select("* , order_items(* , products(*))")
         .eq("user_id", userId)
+        .order("created_at", { ascending: false })
 
     if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });

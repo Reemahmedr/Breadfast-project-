@@ -1,20 +1,59 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
-import { getProfile } from "../apis-actions/profile/profile"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { getProfile, updateProfile } from "../apis-actions/profile/profile"
 import Loading from "@/src/components/loading"
 import { useSession } from "next-auth/react"
+import { getRecentOrders } from "../apis-actions/orders/orders"
+import Link from "next/link"
+import { getAddress } from "../apis-actions/address/address"
+import Image from "next/image"
+import { useEffect, useState } from "react"
+import { Button } from "@/components/ui/button"
 
 export default function page() {
 
+
     const { data: sessionData } = useSession()
+    const queryClient = useQueryClient()
+
+
+    const [isEditProfileOpen, setIsEditProfileOpen] = useState(false)
+
 
     const { data: getProfileData, isLoading: getProfileLoaing } = useQuery({
         queryKey: ['getProfile'],
-        queryFn: getProfile
+        queryFn: getProfile,
+        enabled: !!sessionData?.user.id,
     })
 
     const profile = getProfileData?.profile
+
+    const [fullName, setFullName] = useState(profile?.full_name || "")
+    const [phone, setPhone] = useState(profile?.phone || "")
+
+    useEffect(() => {
+        if (profile) {
+            setFullName(profile.full_name)
+            setPhone(profile.phone)
+        }
+    }, [profile])
+
+
+
+    const { data: getRecentOrdersData } = useQuery({
+        queryKey: ['getOrders'],
+        queryFn: () => getRecentOrders(sessionData?.user.id as string),
+        enabled: !!sessionData?.user.id,
+    })
+
+    const { data: getAddressData } = useQuery({
+        queryKey: ['getAddress'],
+        queryFn: getAddress
+    })
+
+
+
     const totalOrders = getProfileData?.totalOrders;
     const totalSpent = getProfileData?.totalSpent;
     const savedAddress = getProfileData?.totalAddress
@@ -23,13 +62,19 @@ export default function page() {
         { month: "long", year: "numeric" }
     );
 
+    const { mutate: editProfileMutate, isPending: isUpdating } = useMutation({
+        mutationFn: (data: { full_name: string, phone: string }) => updateProfile(data.full_name, data.phone , `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(data.full_name)}&backgroundColor=FCF2F9&textColor=6B21A8`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["getProfile"] })
+        }
+    })
 
-    if (getProfileLoaing) {
+
+    if (getProfileLoaing || isUpdating) {
         return <Loading></Loading>
     }
     return (
         <div>
-
             <div className="bg-linear-to-br from-gray-50 to-purple-50/30 mt-36">
                 {/* Profile Container */}
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 pb-12">
@@ -40,19 +85,24 @@ export default function page() {
                             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
                                 {/* Avatar */}
                                 <div className="relative">
-                                    <div className="w-32 h-32 rounded-full bg-linear-to-r from-purple-600 to-pink-600 p-1">
-                                        <div className="w-full h-full rounded-full bg-white flex items-center justify-center text-4xl font-bold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                                            AH
-                                        </div>
-                                    </div>
+                                    {profile?.avatar_url && (
+                                        <Image
+                                            className="rounded-3xl"
+                                            src={profile.avatar_url.trim()}
+                                            alt="avatar"
+                                            width={100}
+                                            height={100}
+                                            unoptimized
+                                        />
+                                    )}
                                     <div className="absolute -bottom-2 -right-2 bg-linear-to-r from-purple-600 to-pink-600 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-lg">
-                                        Gold
+                                        Hi
                                     </div>
                                 </div>
 
                                 {/* Profile Info */}
                                 <div className="flex-1 text-center sm:text-left">
-                                    <h1 className="text-3xl font-bold text-gray-900 mb-2">{profile?.full_name}</h1>
+                                    <h1 className="text-3xl font-bold text-gray-900 mb-2 capitalize">{profile?.full_name}</h1>
                                     <p className="text-gray-600 mb-4"> Member since {memberSince} </p>
 
                                     <div className="flex flex-wrap gap-4 justify-center sm:justify-start">
@@ -72,9 +122,12 @@ export default function page() {
                                 </div>
 
                                 {/* Edit Button */}
-                                <button className="bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold px-6 py-2.5 rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200">
+                                <Button
+                                    onClick={() => setIsEditProfileOpen(true)}
+                                    className="bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold px-8 cursor-pointer py-3.5 rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 text-base"
+                                >
                                     Edit Profile
-                                </button>
+                                </Button>
                             </div>
                         </div>
 
@@ -101,67 +154,53 @@ export default function page() {
                         <div className="lg:col-span-2">
                             <div className="bg-white rounded-2xl shadow-lg p-6">
                                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Orders</h2>
+                                {getRecentOrdersData?.map((recent: any) => {
 
-                                {/* Order 1 */}
-                                <div className="border border-gray-200 rounded-xl p-5 mb-4 hover:shadow-md transition-shadow">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <div>
-                                            <h3 className="font-bold text-gray-900">#ORD-2024-001</h3>
-                                            <p className="text-sm text-gray-600">Feb 10, 2026</p>
+                                    const totalQuantity = recent.order_items.reduce(
+                                        (acc: number, item: any) => acc + item.quantity,
+                                        0
+                                    )
+
+                                    return (<div className="border border-gray-200 rounded-xl p-5 mb-4 hover:shadow-md transition-shadow">
+                                        <div key={recent.id} className="flex items-center justify-between mb-3">
+                                            <div>
+                                                <h3 className="font-bold text-gray-900"> {recent.order_number} </h3>
+                                                <p className="text-sm text-gray-600">{new Date(recent.created_at).toLocaleDateString()} </p>
+                                            </div>
+                                            <span className="bg-green-100 text-green-700 text-sm font-semibold px-4 py-1.5 rounded-full">
+                                                {recent.order_status}
+                                            </span>
                                         </div>
-                                        <span className="bg-green-100 text-green-700 text-sm font-semibold px-4 py-1.5 rounded-full">
-                                            Delivered
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-gray-600">3 items</span>
-                                        <span className="text-lg font-bold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                                            1,250 EGP
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Order 2 */}
-                                <div className="border border-gray-200 rounded-xl p-5 mb-4 hover:shadow-md transition-shadow">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <div>
-                                            <h3 className="font-bold text-gray-900">#ORD-2024-002</h3>
-                                            <p className="text-sm text-gray-600">Feb 5, 2026</p>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm text-gray-600"> {totalQuantity} items</span>
+                                            <span className="text-lg font-bold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                                                {recent.total_amount} EGP
+                                            </span>
                                         </div>
-                                        <span className="bg-blue-100 text-blue-700 text-sm font-semibold px-4 py-1.5 rounded-full">
-                                            In Transit
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-gray-600">2 items</span>
-                                        <span className="text-lg font-bold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                                            890 EGP
-                                        </span>
-                                    </div>
-                                </div>
+                                    </div>)
+                                })}
 
-                                {/* Order 3 */}
-                                <div className="border border-gray-200 rounded-xl p-5 mb-4 hover:shadow-md transition-shadow">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <div>
-                                            <h3 className="font-bold text-gray-900">#ORD-2024-003</h3>
-                                            <p className="text-sm text-gray-600">Jan 28, 2026</p>
-                                        </div>
-                                        <span className="bg-green-100 text-green-700 text-sm font-semibold px-4 py-1.5 rounded-full">
-                                            Delivered
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-gray-600">5 items</span>
-                                        <span className="text-lg font-bold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                                            2,340 EGP
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <button className="w-full mt-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-xl transition-colors duration-200">
-                                    View All Orders
-                                </button>
+                                <Link
+                                    href={`/orders`}
+                                    className="w-full mt-4 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2"
+                                >
+                                    <span>View All Orders</span>
+                                    <svg
+                                        className="w-5 h-5"
+                                        aria-hidden="true"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke="currentColor"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M19 12H5m14 0-4 4m4-4-4-4"
+                                        />
+                                    </svg>
+                                </Link>
                             </div>
                         </div>
 
@@ -170,34 +209,45 @@ export default function page() {
                             {/* Saved Addresses */}
                             <div className="bg-white rounded-2xl shadow-lg p-6">
                                 <h2 className="text-xl font-bold text-gray-900 mb-4">Saved Addresses</h2>
-
-                                {/* Address 1 */}
-                                <div className="border-l-4 border-purple-600 bg-purple-50 rounded-r-lg p-4 mb-4">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="font-bold text-gray-900">Home</span>
-                                        <span className="bg-linear-to-r from-purple-600 to-pink-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
-                                            Default
-                                        </span>
-                                    </div>
-                                    <p className="text-sm text-gray-700 mb-1">123 Tahrir Street, Downtown</p>
-                                    <p className="text-sm text-gray-600">Cairo, 11511</p>
-                                </div>
-
-                                {/* Address 2 */}
-                                <div className="border border-gray-200 rounded-lg p-4 mb-4">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="font-bold text-gray-900">Work</span>
-                                    </div>
-                                    <p className="text-sm text-gray-700 mb-1">456 Nile Corniche, Maadi</p>
-                                    <p className="text-sm text-gray-600">Cairo, 11728</p>
-                                </div>
-
-                                <button className="w-full bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-2.5 px-4 rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                {getAddressData?.map((address: any) => {
+                                    return (<div
+                                        key={address.id}
+                                        className={`rounded-lg p-4 mb-4 ${address.is_default
+                                            ? 'border-2 border-purple-500 bg-purple-50'
+                                            : 'border border-gray-200 bg-white'
+                                            }`}
+                                    >
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="font-bold text-gray-900 capitalize"> {address.address_type} </span>
+                                            {address.is_default && <span className="bg-linear-to-r from-purple-600 to-pink-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
+                                                Default
+                                            </span>}
+                                        </div>
+                                        <p className="text-sm text-gray-700 mb-1 capitalize"> {address.street_address} , {address.area} </p>
+                                        <p className="text-sm text-gray-600 capitalize"> {address.city} </p>
+                                    </div>)
+                                })}
+                                <Link
+                                    href={`/address`}
+                                    className="w-full mt-4 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2"
+                                >
+                                    <span>View All Addresses</span>
+                                    <svg
+                                        className="w-5 h-5"
+                                        aria-hidden="true"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke="currentColor"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M19 12H5m14 0-4 4m4-4-4-4"
+                                        />
                                     </svg>
-                                    Add New Address
-                                </button>
+                                </Link>
                             </div>
 
                             {/* Account Settings */}
@@ -238,6 +288,102 @@ export default function page() {
                     </div>
                 </div>
             </div>
+
+            {isEditProfileOpen && (
+                <div className="fixed inset-0 backdrop-blur-md flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+                            <h2 className="text-2xl font-bold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                                Edit Profile
+                            </h2>
+                            <button
+                                onClick={() => setIsEditProfileOpen(false)}
+                                className="text-gray-400 cursor-pointer hover:text-gray-600 transition-colors"
+                            >
+                                <svg
+                                    className="w-6 h-6"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
+                                </svg>
+                            </button>
+                        </div>
+                        <form onSubmit={(e) => {
+                            e.preventDefault()
+                            editProfileMutate({ full_name: fullName, phone: phone })
+                            setIsEditProfileOpen(false)
+                        }} className="p-6 space-y-4">
+                            <div className="flex flex-col items-center mb-6">
+                                <div className="relative mb-4">
+                                    <Image src={profile.avatar_url.trim()} alt="avatar" width={100} height={100} unoptimized className="rounded-full" />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Full Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={fullName}
+                                        onChange={(e) => setFullName(e.target.value)}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                                        placeholder="Enter your full name"
+                                    />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Email Address
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={sessionData?.user.email as string}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-gray-50"
+                                        placeholder="Enter your email"
+                                        disabled
+                                    />
+                                    <p className="mt-1.5 text-xs text-gray-500">Email cannot be changed</p>
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Phone Number
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value)}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                                        placeholder="+20 123 456 7890"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex gap-3 pt-4">
+                                <Button
+                                    type="button"
+                                    onClick={() => setIsEditProfileOpen(false)}
+                                    className="flex-1 px-6 cursor-pointer py-3 bg-gray-50 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-all"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    className="flex-1 px-6 cursor-pointer py-3 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all"
+                                >
+                                    Save Changes
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

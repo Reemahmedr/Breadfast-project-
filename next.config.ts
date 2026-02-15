@@ -7,6 +7,10 @@ const nextConfig = {
         hostname: "khfbozdcrkgxblswaqlg.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
+      {
+        protocol: "https",
+        hostname: "avatar.iran.liara.run"
+      },
     ],
   },
 };
