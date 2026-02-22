@@ -44,6 +44,14 @@ export async function POST(req: Request) {
 
     const body = await req.json()
 
+    const { data: zone } = await supabaseServer
+        .from("delivery_zone_areas")
+        .select("delivery_zone_id")
+        .eq("area", body.area)
+        .limit(1)
+        .single()
+
+
 
     const { data: existing, error: existingError } = await supabaseServer
         .from("addresses")
@@ -69,9 +77,10 @@ export async function POST(req: Request) {
         user_id: userId,
         street_address: body.street_address,
         area: body.area,
-        phone: body.phone?.trim() ,
+        phone: body.phone?.trim(),
         city: body.city,
         is_default: body.is_default || isFirst,
+        delivery_zone_id: zone?.delivery_zone_id || null,
 
         ...(body.address_type && { address_type: body.address_type }),
         ...(body.building && { building: body.building }),
@@ -79,6 +88,8 @@ export async function POST(req: Request) {
         ...(body.apartment && { apartment: body.apartment }),
         ...(body.landmark && { landmark: body.landmark }),
     }
+
+    
 
     const { data, error } = await supabaseServer
         .from("addresses")

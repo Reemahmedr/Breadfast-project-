@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form"
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import Loading from "@/src/components/loading"
-
+import { getDeliveryZone } from "../apis-actions/delivery-zone/delivery_zone"
 
 export default function page() {
 
@@ -14,6 +14,7 @@ export default function page() {
     const [isFormOpen, setIsFormOpen] = useState(false)
     const [editingAddress, setEditingAddress] = useState<Address | null>(null)
     const [editingAddressId, setEditingAddressId] = useState<string | null>(null)
+    const [selectedCity, setSelectedCity] = useState("")
 
 
     useEffect(() => {
@@ -32,6 +33,41 @@ export default function page() {
         queryKey: ["getAddress"],
         queryFn: getAddress
     })
+
+    const { data: DeliveryZoneData } = useQuery({
+        queryKey: ['getDeliveryZone'],
+        queryFn: getDeliveryZone
+    })
+
+    console.log("DELIVERY DATA:", DeliveryZoneData)
+
+    const groupedZones = DeliveryZoneData?.reduce((acc: any, row: any) => {
+        const city = row.delivery_zones?.city
+        const area = row.area
+        if (!city) return acc
+
+        if (!acc[city]) {
+            acc[city] = []
+        }
+        acc[city].push(area)
+        return acc
+    }, {}) || {}
+
+
+
+
+    useEffect(() => {
+        if (editingAddress) {
+            reset(editingAddress)
+            setSelectedCity(editingAddress.city || "")
+        } else {
+            reset({})
+            setSelectedCity("")
+        }
+    }, [editingAddress, reset])
+
+
+
 
     const { mutate: addAddressMutate } = useMutation({
         mutationFn: (payload: Address) =>
@@ -368,87 +404,59 @@ export default function page() {
                                     </select>
                                 </div>
 
-                                {/* Street Address */}
                                 <div className="md:col-span-2">
                                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                                         Street Address <i className="fa-solid fa-asterisk text-[.5rem] text-red-500 opacity-70" />
-
                                     </label>
                                     <input
-                                        {...register("street_address")}
+                                        {...register("street_address", { required: "Street address is required" })}
                                         type="text"
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white"
                                         placeholder="Enter street address"
                                     />
-                                    {errors.street_address && <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1">
-                                        <svg
-                                            className="w-4 h-4"
-                                            fill="currentColor"
-                                            viewBox="0 0 20 20"
-                                        >
-                                            <path
-                                                fillRule="evenodd"
-                                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                                                clipRule="evenodd"
-                                            />
-                                        </svg>
-                                        This field is required
-                                    </p>}
-                                </div>
-
-                                {/* Area */}
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Area <i className="fa-solid fa-asterisk text-[.5rem] text-red-500 opacity-70" />
-                                    </label>
-                                    <input
-                                        {...register("area")}
-                                        type="text"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                                        placeholder="Enter area"
-                                    />
-                                    {errors.area && <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1">
-                                        <svg
-                                            className="w-4 h-4"
-                                            fill="currentColor"
-                                            viewBox="0 0 20 20"
-                                        >
-                                            <path
-                                                fillRule="evenodd"
-                                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                                                clipRule="evenodd"
-                                            />
-                                        </svg>
-                                        This field is required
-                                    </p>}
+                                    {errors.street_address && <p className="mt-1.5 text-sm text-red-600">{errors.street_address.message}</p>}
                                 </div>
 
                                 {/* City */}
-                                <div>
+                                <div className="md:col-span-2">
                                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                                         City <i className="fa-solid fa-asterisk text-[.5rem] text-red-500 opacity-70" />
                                     </label>
-                                    <input
-                                        {...register("city")}
-                                        type="text"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                                        placeholder="Enter city"
-                                    />
-                                    {errors.city && <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1">
-                                        <svg
-                                            className="w-4 h-4"
-                                            fill="currentColor"
-                                            viewBox="0 0 20 20"
-                                        >
-                                            <path
-                                                fillRule="evenodd"
-                                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                                                clipRule="evenodd"
-                                            />
-                                        </svg>
-                                        This field is required
-                                    </p>}
+                                    <select
+                                        {...register("city", { required: "City is required" })}
+                                        value={selectedCity}
+                                        onChange={(e) => setSelectedCity(e.target.value)}
+                                        className="w-full px-4 py-3 cursor-pointer border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                                    >
+                                        <option disabled selected value="">Select city</option>
+                                        {Object.keys(groupedZones).map((city) => (
+                                            <option key={city} value={city}>{city}</option>
+                                        ))}
+                                    </select>
+                                    {errors.city && <p className="mt-1.5 text-sm text-red-600">{errors.city.message}</p>}
                                 </div>
+
+                                {/* Area */}
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Area <i className="fa-solid fa-asterisk text-[.5rem] text-red-500 opacity-70" />
+                                    </label>
+                                    <select
+                                        {...register("area", { required: "Area is required" })}
+                                        disabled={!selectedCity}
+                                        className="w-full px-4 py-3 border cursor-pointer border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                                    >
+                                        <option disabled selected value="">Select area</option>
+                                        {selectedCity && groupedZones[selectedCity].map((area: any) => (
+                                            <option key={area} value={area}>{area}</option>
+                                        ))}
+                                    </select>
+                                    {errors.area && <p className="mt-1.5 text-sm text-red-600">{errors.area.message}</p>}
+                                </div>
+
+
+
+
 
                                 {/* Phone */}
                                 <div className="md:col-span-2">

@@ -122,6 +122,28 @@ export async function POST(req: Request) {
         total = subtotal - discount
     }
 
+    const { data: address, error: addressError } = await supabaseServer
+        .from("addresses")
+        .select("delivery_zone_id")
+        .eq("id", address_id)
+        .single()
+
+    if (addressError || !address) {
+        return NextResponse.json({ error: "Invalid address" }, { status: 400 })
+    }
+
+    const { data: zone, error: zoneError } = await supabaseServer
+        .from("delivery_zones")
+        .select("estimated_delivery_time")
+        .eq("id", address.delivery_zone_id)
+        .single()
+
+    if (zoneError || !zone) {
+        return NextResponse.json({ error: "Delivery zone not found" }, { status: 400 })
+    }
+
+    const estimatedTime = new Date(Date.now() + zone.estimated_delivery_time * 60000)
+
 
 
     const { data: order, error: orderError } = await supabaseServer
@@ -135,7 +157,8 @@ export async function POST(req: Request) {
             payment_status: "pending",
             order_status: "pending",
             discount_amount: discount,
-            promo_code_id: promo_id ?? null
+            promo_code_id: promo_id ?? null,
+            estimated_delivery_time: estimatedTime,
         }])
         .select()
         .single()
@@ -200,4 +223,53 @@ export async function POST(req: Request) {
         order,
         clientSecret: paymentIntent.client_secret
     }, { status: 201 })
+}
+export async function PUT(req: Request) {
+    const session = await getServerSession(authOptions)
+    const userId = session?.user?.id
+
+    if (!userId) {
+        return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const { order_id, order_status } = await req.json();
+
+    const { data: order, error: orderError } = await supabaseServer
+        .from("orders")
+        .select("*")
+        .eq("id", order_id)
+        .eq("user_id", userId)
+        .single();
+
+    if (orderError || !order) {
+        return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    if (order_status === "cancelled") {
+        if (["shipped", "delivered", "cancelled"].includes(order.order_status)) {
+            return NextResponse.json(
+                { error: `Cannot cancel order in status: ${order.order_status}` },
+                { status: 400 }
+            );
+        }
+
+        const { data =[], error } = await supabaseServer
+            .from("orders")
+            .update({ order_status: "cancelled", cancelled_at: new Date() })
+            .eq("id", order_id);
+
+        console.log("cancelledOrder:", data, "cancelError:", error);
+
+        if (error) {
+            return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+
+        if (!data || data.length === 0) {
+            return NextResponse.json({ error: "No order updated" }, { status: 400 });
+        }
+
+        return NextResponse.json({ message: "Order cancelled successfully", order: data[0] });
+    }
+    
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 }

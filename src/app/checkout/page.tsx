@@ -132,7 +132,7 @@ export default function CheckoutPage() {
                     promo_code_id: promoFromUrl ?? null
                 })
 
-                clearCartMutate(user_id)
+                // clearCartMutate(user_id)
 
                 if (!data?.clientSecret) {
                     throw new Error("No client secret returned from backend")
