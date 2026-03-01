@@ -7,6 +7,8 @@ import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import Loading from "@/src/components/loading"
 import { getDeliveryZone } from "../apis-actions/delivery-zone/delivery_zone"
+import { useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 
 export default function page() {
 
@@ -15,6 +17,11 @@ export default function page() {
     const [editingAddress, setEditingAddress] = useState<Address | null>(null)
     const [editingAddressId, setEditingAddressId] = useState<string | null>(null)
     const [selectedCity, setSelectedCity] = useState("")
+
+    const searchParams = useSearchParams()
+    const router = useRouter()
+
+    const redirect = searchParams.get("redirect")
 
 
     useEffect(() => {
@@ -75,6 +82,9 @@ export default function page() {
         onSuccess: () => {
             toast.success("Your address added"),
                 queryClient.invalidateQueries({ queryKey: ["getAddress"] })
+            if (redirect) {
+                router.push(redirect)
+            }
         }
     })
 

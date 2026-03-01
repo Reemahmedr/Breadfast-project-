@@ -51,6 +51,22 @@ export async function POST(req: Request) {
         )
     }
 
+    // const { data: existingOrder, error: existingError } = await supabaseServer
+    //     .from("orders")
+    //     .select("*")
+    //     .eq("user_id", user_id)
+    //     .eq("order_status", "pending")
+    //     .order("created_at", { ascending: false })
+
+    // if (existingError) {
+    //     console.error("Existing order check error:", existingError)
+    //     return NextResponse.json({ error: existingError.message }, { status: 500 })
+    // }
+
+    // if (existingOrder) {
+    //     return NextResponse.json({ message: "Pending order exists", order: existingOrder }, { status: 200 })
+    // }
+
     const { data: cart, error: cartError } = await supabaseServer
         .from("cart_items")
         .select("*, products(*)")
@@ -253,7 +269,7 @@ export async function PUT(req: Request) {
             );
         }
 
-        const { data =[], error } = await supabaseServer
+        const { data = [], error } = await supabaseServer
             .from("orders")
             .update({ order_status: "cancelled", cancelled_at: new Date() })
             .eq("id", order_id);
@@ -270,6 +286,6 @@ export async function PUT(req: Request) {
 
         return NextResponse.json({ message: "Order cancelled successfully", order: data[0] });
     }
-    
+
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 }

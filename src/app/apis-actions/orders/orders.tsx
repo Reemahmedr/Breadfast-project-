@@ -3,6 +3,7 @@ export type Order = {
     address_id: string,
     payment_method: string
     promo_code_id?: string | null
+    payment_intent_id: string
 }
 
 
@@ -44,7 +45,7 @@ export async function createOrders(order_item: Order) {
     return res.json()
 }
 
-export async function cancelOrder(order_id: string , order_status :string) {
+export async function cancelOrder(order_id: string, order_status: string) {
     const res = await fetch(`/api/orders`, {
         method: "PUT",
         cache: "no-store",

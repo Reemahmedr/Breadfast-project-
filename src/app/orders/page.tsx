@@ -139,7 +139,7 @@ export default function page() {
                 }`}>
                 Delivered
               </button>
-              <button className={`px-6 py-2 rounded-xl font-semibold ${filterStatus === "cancelled"
+              <button onClick={() => setFilterStatus("cancelled")} className={`px-6 py-2 cursor-pointer rounded-xl font-semibold ${filterStatus === "cancelled"
                 ? "bg-linear-to-r from-purple-600 to-pink-600 text-white"
                 : "bg-white text-gray-700 border border-gray-200"
                 }`}>

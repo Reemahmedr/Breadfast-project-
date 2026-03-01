@@ -318,31 +318,30 @@ export default function page() {
                                                 </div>
                                                 <p className="text-sm text-gray-700 mb-1 capitalize">{address.street_address}, {address.area}</p>
                                                 <p className="text-sm text-gray-600 capitalize">{address.city}</p>
-
-                                                <Link
-                                                    href={`/address`}
-                                                    className="w-full mt-4 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2"
-                                                >
-                                                    <span>View All Addresses</span>
-                                                    <svg
-                                                        className="w-5 h-5"
-                                                        aria-hidden="true"
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                    >
-                                                        <path
-                                                            stroke="currentColor"
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            strokeWidth={2}
-                                                            d="M19 12H5m14 0-4 4m4-4-4-4"
-                                                        />
-                                                    </svg>
-                                                </Link>
                                             </div>
                                         ))
                                     )}
+                                    <Link
+                                        href={`/address`}
+                                        className="w-full mt-4 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2"
+                                    >
+                                        <span>View All Addresses</span>
+                                        <svg
+                                            className="w-5 h-5"
+                                            aria-hidden="true"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke="currentColor"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M19 12H5m14 0-4 4m4-4-4-4"
+                                            />
+                                        </svg>
+                                    </Link>
                                 </div>
 
                                 {/* Account Settings */}

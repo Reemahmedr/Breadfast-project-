@@ -11,12 +11,14 @@ import { useState } from "react"
 import toast from "react-hot-toast"
 import { useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { createOrders, Order } from "../app/apis-actions/orders/orders"
 
 
 export default function CheckoutForm({ clientSecret }: { clientSecret: string }) {
     const stripe = useStripe()
     const elements = useElements()
     const [loading, setLoading] = useState(false)
+    const [clientsecret, setClientSecret] = useState<string>(clientSecret || "")
 
     const { data: sessionData } = useSession()
     const queryClient = useQueryClient()
@@ -69,65 +71,110 @@ export default function CheckoutForm({ clientSecret }: { clientSecret: string })
     //     setLoading(false)
     // }
 
+    // const handleSubmit = async (e: React.FormEvent) => {
+    //     e.preventDefault()
+
+    //     if (!stripe || !elements) return
+
+    //     setLoading(true)
+
+    //     const { error: submitError } = await elements.submit()
+    //     if (submitError) {
+    //         setLoading(false)
+    //         toast.error(submitError.message || "Invalid payment details")
+    //         return
+    //     }
+
+    //     // const { error, paymentIntent } = await stripe.confirmPayment({
+    //     //     elements,
+    //     //     redirect: "if_required",
+    //     // })
+
+    //     // if (error) {
+    //     //     toast.error(error.message || "Payment failed")
+    //     //     setLoading(false)
+    //     //     return
+    //     // }
+
+    //     // if (paymentIntent?.status === "succeeded") {
+
+    //     //     await fetch("/api/orders", {
+    //     //         method: "POST",
+    //     //         headers: { "Content-Type": "application/json" },
+    //     //         body: JSON.stringify({
+    //     //             user_id,
+    //     //             address_id,
+    //     //             promo_id,
+    //     //             payment_intent_id: paymentIntent.id,
+    //     //         }),
+    //     //     })
+
+    //     //     await supabase
+    //     //         .from("cart_items")
+    //     //         .delete()
+    //     //         .eq("user_id", user_id)
+
+    //     //     toast.success("Payment successful 🎉")
+    //     // }
+
+    //     const { error } = await stripe.confirmPayment({
+    //         elements,
+    //         confirmParams: {
+    //             return_url: window.location.origin + "/success", // بعد الدفع
+    //         },
+    //     })
+
+    //     if (error) {
+    //         console.error(error)
+    //         toast.error("error in checkout form")
+    //     }
+
+    // }
+
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
+        e.preventDefault();
+        if (!stripe || !elements) return;
 
-        if (!stripe || !elements) return
+        setLoading(true);
 
-        setLoading(true)
+        try {
+            const { paymentIntent, error } = await stripe.confirmPayment({
+                elements,
+                redirect: "if_required",
+            });
 
-        const { error: submitError } = await elements.submit()
-        if (submitError) {
-            setLoading(false)
-            toast.error(submitError.message || "Invalid payment details")
-            return
+            if (error) throw error;
+
+            if (paymentIntent?.status === "succeeded") {
+                // 1. Prepare order object
+                const orderData: Order = {
+                    user_id,
+                    address_id,
+                    promo_code_id: promo_id,
+                    payment_intent_id: paymentIntent.id,
+                    payment_method: "card",
+                    // add other fields your backend requires, like cart items
+                };
+
+                // 2. Call your createOrders function
+                const orderResult = await createOrders(orderData);
+
+                console.log("Order created:", orderResult);
+
+                // 3. Clear cart
+                await supabase.from("cart_items").delete().eq("user_id", user_id);
+
+                toast.success("Payment successful and order confirmed 🎉");
+
+                // 4. Redirect to success page
+                window.location.href = "/success";
+            }
+        } catch (err: any) {
+            toast.error(err.message || "Payment failed");
+        } finally {
+            setLoading(false);
         }
-
-        // const { error, paymentIntent } = await stripe.confirmPayment({
-        //     elements,
-        //     redirect: "if_required",
-        // })
-
-        // if (error) {
-        //     toast.error(error.message || "Payment failed")
-        //     setLoading(false)
-        //     return
-        // }
-
-        // if (paymentIntent?.status === "succeeded") {
-
-        //     await fetch("/api/orders", {
-        //         method: "POST",
-        //         headers: { "Content-Type": "application/json" },
-        //         body: JSON.stringify({
-        //             user_id,
-        //             address_id,
-        //             promo_id,
-        //             payment_intent_id: paymentIntent.id,
-        //         }),
-        //     })
-
-        //     await supabase
-        //         .from("cart_items")
-        //         .delete()
-        //         .eq("user_id", user_id)
-
-        //     toast.success("Payment successful 🎉")
-        // }
-
-        const { error } = await stripe.confirmPayment({
-            elements,
-            confirmParams: {
-                return_url: window.location.origin + "/success", // بعد الدفع
-            },
-        })
-
-        if (error) {
-            console.error(error)
-            toast.error("error in checkout form")
-        }
-
-    }
+    };
 
 
 

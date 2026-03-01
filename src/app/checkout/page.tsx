@@ -14,6 +14,7 @@ import { useSearchParams } from "next/navigation"
 import { getAddress } from "../apis-actions/address/address"
 import { getCheckoutPreview } from "../apis-actions/checkout/preview/preview"
 import { clearCart } from "../apis-actions/cart/cart"
+import No_Address from "@/src/components/No_Address"
 
 export default function CheckoutPage() {
     const [clientSecret, setClientSecret] = useState<string | null>(null)
@@ -38,30 +39,9 @@ export default function CheckoutPage() {
         }
     })
 
-    const { isPending: clearCartPending, mutate: clearCartMutate } = useMutation({
-        mutationFn: clearCart,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["getCart", user_id] }),
-                toast.success("Your cart cleared successfully")
-        }
-    })
 
 
-    const { data: address, error } = useQuery({ queryKey: ['getAddress'], queryFn: getAddress, enabled: !!user_id })
-
-
-
-    const { data: cartTotal } = useQuery({
-        queryKey: ["cartTotal"],
-        queryFn: async () => {
-            const { data, error } = await supabase.rpc("get_cart_total", { p_user_id: user_id })
-            if (error) {
-                throw error
-            }
-            return data
-        },
-        enabled: !!sessionData?.user
-    })
+    const { data: address, isLoading: addressIsLoading } = useQuery({ queryKey: ['getAddress'], queryFn: getAddress, enabled: !!user_id })
 
 
     const { data: preview } = useQuery({
@@ -70,86 +50,71 @@ export default function CheckoutPage() {
         enabled: !!user_id
     })
 
+
     // useEffect(() => {
-    //     // async function createIntent() {
-    //     //     const res = await fetch("/api/checkout", {
-    //     //         method: "POST",
-    //     //         headers: { "Content-Type": "application/json" },
-    //     //         body: JSON.stringify({ amount: 500000 }),
-    //     //     })
+    //     if (!user_id) return
+    //     if (!address?.length) return
+    //     if (clientSecret) return
+    //     if (hasInitialized.current) return;
 
-    //     //     const data = await res.json()
-    //     //     setClientSecret(data.clientSecret)
-    //     //     console.log("API RESPONSE:", data)
-    //     // }
+    //     hasInitialized.current = true;
 
-    //     // createIntent()
+    //     async function initPaymentIntent() {
+    //         try {
+    //             const data = await createOrders({
+    //                 user_id,
+    //                 address_id: address[0].id,
+    //                 payment_method: "card",
+    //                 promo_code_id: promoFromUrl ?? null
+    //             })
 
-    //     if (!cartTotal || !user_id) return
-    //     if (hasInitialized.current) return
+    //             // clearCartMutate(user_id)
 
-    //     hasInitialized.current = true
+    //             if (!data?.clientSecret) {
+    //                 throw new Error("No client secret returned from backend")
+    //             }
 
-    //     async function iniitCheckout() {
-    //         const order = await createOrders({
-    //             user_id,
-    //             address_id: "36d39f5b-6965-4d66-afa8-7bf234ebe782",
-    //             payment_method: "card",
-    //         })
-    //         console.log("ORDER ID:", order.id)
-
-
-    //         // const res = await fetch("/api/checkout", {
-    //         //     method: "POST",
-    //         //     headers: { "Content-Type": "application/json" },
-    //         //     body: JSON.stringify({
-    //         //         amount: cartTotal * 1000,
-    //         //         order_id: order.id,
-    //         //     }),
-    //         // })
-
-    //         // const data = await res.json()
-    //         // setClientSecret(data.clientSecret)
+    //             setClientSecret(data.clientSecret)
+    //             console.log("Stripe ClientSecret:", data.clientSecret)
+    //         } catch (err) {
+    //             console.error("Checkout init error:", err)
+    //             toast.error("error in completing payment")
+    //         }
     //     }
-    //     iniitCheckout()
-    // }, [cartTotal, user_id])
 
+    //     initPaymentIntent()
+    // }, [user_id, address, promoFromUrl, clientSecret])
 
     useEffect(() => {
-        if (!user_id) return
-        if (!address?.length) return
-        if (clientSecret) return
-        if (hasInitialized.current) return;
+        if (!user_id || !preview) return;
 
-        hasInitialized.current = true;
-
-        async function initPaymentIntent() {
+        async function fetchClientSecret() {
             try {
-                const data = await createOrders({
-                    user_id,
-                    address_id: address[0].id,
-                    payment_method: "card",
-                    promo_code_id: promoFromUrl ?? null
-                })
-
-                // clearCartMutate(user_id)
-
-                if (!data?.clientSecret) {
-                    throw new Error("No client secret returned from backend")
-                }
-
-                setClientSecret(data.clientSecret)
-                console.log("Stripe ClientSecret:", data.clientSecret)
+                const res = await fetch("/api/payment-intent", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ amount: preview.total }),
+                });
+                const data = await res.json();
+                setClientSecret(data.clientSecret);
             } catch (err) {
-                console.error("Checkout init error:", err)
-                toast.error("error in completing payment")
+                console.error("Error fetching client secret:", err);
+                toast.error("Failed to initialize payment");
             }
         }
 
-        initPaymentIntent()
-    }, [user_id, address, promoFromUrl, clientSecret])
+        fetchClientSecret();
+    }, [user_id, preview]);
 
-    if (!address || !clientSecret) return <Loading />
+    if (addressIsLoading) {
+        return <Loading />
+    }
+
+    if (!address || address.length === 0) {
+        return <No_Address />
+    }
+
+    // if (!clientSecret) return <Loading />
 
 
 
