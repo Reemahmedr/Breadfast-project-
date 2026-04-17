@@ -33,7 +33,8 @@ export async function GET() {
 
 export async function POST(req: Request) {
     const body = await req.json()
-    const { user_id, address_id, payment_method, promo_id } = body
+    const { user_id, address_id, payment_method, promo_id, promo_code_id } = body
+    const resolvedPromoId = promo_id ?? promo_code_id ?? null
 
     if (!user_id || !address_id || !payment_method) {
         return NextResponse.json(
@@ -51,22 +52,6 @@ export async function POST(req: Request) {
         )
     }
 
-    // const { data: existingOrder, error: existingError } = await supabaseServer
-    //     .from("orders")
-    //     .select("*")
-    //     .eq("user_id", user_id)
-    //     .eq("order_status", "pending")
-    //     .order("created_at", { ascending: false })
-
-    // if (existingError) {
-    //     console.error("Existing order check error:", existingError)
-    //     return NextResponse.json({ error: existingError.message }, { status: 500 })
-    // }
-
-    // if (existingOrder) {
-    //     return NextResponse.json({ message: "Pending order exists", order: existingOrder }, { status: 200 })
-    // }
-
     const { data: cart, error: cartError } = await supabaseServer
         .from("cart_items")
         .select("*, products(*)")
@@ -77,6 +62,7 @@ export async function POST(req: Request) {
     }
 
     if (!cart || cart.length === 0) {
+        console.log("CART EMPTY");
         return NextResponse.json(
             { error: "cart is empty" },
             { status: 400 }
@@ -92,11 +78,11 @@ export async function POST(req: Request) {
     let total = subtotal
 
     let promo: any = null
-    if (promo_id) {
+    if (resolvedPromoId) {
         const { data, error: promoError } = await supabaseServer
             .from("promo_codes")
             .select("*")
-            .eq("id", promo_id)
+            .eq("id", resolvedPromoId)
             .single()
 
         promo = data
@@ -145,20 +131,24 @@ export async function POST(req: Request) {
         .single()
 
     if (addressError || !address) {
+        console.log("address EMPTY");
         return NextResponse.json({ error: "Invalid address" }, { status: 400 })
     }
 
     const { data: zone, error: zoneError } = await supabaseServer
         .from("delivery_zones")
-        .select("estimated_delivery_time")
+        .select("estimated_delivery_time, delivery_fee")
         .eq("id", address.delivery_zone_id)
         .single()
 
     if (zoneError || !zone) {
+        console.log("zone EMPTY");
         return NextResponse.json({ error: "Delivery zone not found" }, { status: 400 })
     }
 
     const estimatedTime = new Date(Date.now() + zone.estimated_delivery_time * 60000)
+    const deliveryFee = Number(zone.delivery_fee ?? 0)
+    const totalAmount = total + deliveryFee
 
 
 
@@ -168,12 +158,12 @@ export async function POST(req: Request) {
             user_id,
             address_id,
             payment_method,
-            total_amount: total,
+            total_amount: totalAmount,
             subtotal: subtotal ?? 0,
             payment_status: "pending",
             order_status: "pending",
             discount_amount: discount,
-            promo_code_id: promo_id ?? null,
+            promo_code_id: resolvedPromoId,
             estimated_delivery_time: estimatedTime,
         }])
         .select()
@@ -203,36 +193,63 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: itemsError.message }, { status: 500 })
     }
 
-    if (promo_id && promo) {
+    if (resolvedPromoId && promo) {
         await supabaseServer
             .from("promo_codes")
             .update({ usage_count: promo.usage_count + 1 })
-            .eq("id", promo_id)
+            .eq("id", resolvedPromoId)
 
         await supabaseServer
             .from("user_promo_usage")
             .insert({
-                promo_code_id: promo_id,
+                promo_code_id: resolvedPromoId,
                 user_id,
                 order_id: order.id
             })
     }
 
-    const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(total * 1000),
-        currency: "egp",
-        automatic_payment_methods: { enabled: true },
-        metadata: {
-            order_id: order.id,
-            user_id,
-            promo_id: promo_id ?? null,
-        }
-    })
+    let paymentIntent
+    try {
+        paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(totalAmount * 100),
+            currency: "egp",
+            automatic_payment_methods: { enabled: true },
+            metadata: {
+                order_id: String(order.id),
+                user_id: String(user_id),
+                ...(resolvedPromoId != null
+                    ? { promo_id: String(resolvedPromoId) }
+                    : {}),
+            },
+        })
+    } catch (stripeErr: unknown) {
+        const message =
+            stripeErr instanceof Error ? stripeErr.message : "Payment setup failed"
+        console.error("Stripe payment intent error:", stripeErr)
+        return NextResponse.json({ error: message }, { status: 502 })
+    }
 
-    await supabaseServer
+    const { error: linkPiError } = await supabaseServer
         .from("orders")
         .update({ payment_intent_id: paymentIntent.id })
         .eq("id", order.id)
+
+    if (linkPiError) {
+        console.error("Failed to attach payment_intent_id to order:", linkPiError)
+    }
+
+    const { data, error } = await supabaseServer
+        .from("notifications")
+        .insert({
+            user_id,
+            title: "Order Made",
+            message: "Your order was made successfully",
+            type: "order",
+            is_read: false
+        })
+        .select();
+
+    console.log(data, error);
 
 
     return NextResponse.json({

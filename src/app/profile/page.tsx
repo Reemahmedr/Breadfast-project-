@@ -10,6 +10,8 @@ import { getAddress } from "../apis-actions/address/address"
 import Image from "next/image"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
+import Change_Password from "@/src/components/Change_Password"
+import Notifications from "@/src/components/Notifications"
 
 export default function page() {
 
@@ -19,6 +21,7 @@ export default function page() {
 
 
     const [isEditProfileOpen, setIsEditProfileOpen] = useState(false)
+    const [isOpen, setIsOpen] = useState(false);
 
 
     const { data: getProfileData, isLoading: getProfileLoaing } = useQuery({
@@ -158,31 +161,6 @@ export default function page() {
                             <div className="lg:col-span-2">
                                 <div className="bg-white rounded-2xl shadow-lg p-6">
                                     <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Orders</h2>
-                                    {/* {getRecentOrdersData?.map((recent: any) => {
-
-                                        const totalQuantity = recent.order_items.reduce(
-                                            (acc: number, item: any) => acc + item.quantity,
-                                            0
-                                        )
-
-                                        return (<div className="border border-gray-200 rounded-xl p-5 mb-4 hover:shadow-md transition-shadow">
-                                            <div key={recent.id} className="flex items-center justify-between mb-3">
-                                                <div>
-                                                    <h3 className="font-bold text-gray-900"> {recent.order_number} </h3>
-                                                    <p className="text-sm text-gray-600">{new Date(recent.created_at).toLocaleDateString()} </p>
-                                                </div>
-                                                <span className="bg-green-100 text-green-700 text-sm font-semibold px-4 py-1.5 rounded-full">
-                                                    {recent.order_status}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-sm text-gray-600"> {totalQuantity} items</span>
-                                                <span className="text-lg font-bold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                                                    {recent.total_amount} EGP
-                                                </span>
-                                            </div>
-                                        </div>)
-                                    })} */}
 
 
                                     {getRecentOrdersData?.length === 0 || !getRecentOrdersData ? (
@@ -260,24 +238,6 @@ export default function page() {
                                 {/* Saved Addresses */}
                                 <div className="bg-white rounded-2xl shadow-lg p-6">
                                     <h2 className="text-xl font-bold text-gray-900 mb-4">Saved Addresses</h2>
-                                    {/* {getAddressData?.map((address: any) => {
-                                        return (<div
-                                            key={address.id}
-                                            className={`rounded-lg p-4 mb-4 ${address.is_default
-                                                ? 'border-2 border-purple-500 bg-purple-50'
-                                                : 'border border-gray-200 bg-white'
-                                                }`}
-                                        >
-                                            <div className="flex items-center justify-between mb-2">
-                                                <span className="font-bold text-gray-900 capitalize"> {address.address_type} </span>
-                                                {address.is_default && <span className="bg-linear-to-r from-purple-600 to-pink-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
-                                                    Default
-                                                </span>}
-                                            </div>
-                                            <p className="text-sm text-gray-700 mb-1 capitalize"> {address.street_address} , {address.area} </p>
-                                            <p className="text-sm text-gray-600 capitalize"> {address.city} </p>
-                                        </div>)
-                                    })} */}
 
 
                                     {getAddressData?.length === 0 || !getAddressData ? (
@@ -349,33 +309,31 @@ export default function page() {
                                     <h2 className="text-xl font-bold text-gray-900 mb-4">Account Settings</h2>
 
                                     <div className="space-y-3">
-                                        <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-3 text-gray-700">
+                                        <Button
+                                            onClick={() => setIsOpen(true)}
+                                            variant="ghost" className="w-full text-left px-4 cursor-pointer py-3 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-3 text-gray-700"
+                                        >
                                             <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                                             </svg>
                                             Change Password
-                                        </button>
+                                        </Button>
 
-                                        <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-3 text-gray-700">
-                                            <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                                            </svg>
-                                            Notifications
-                                        </button>
+                                        <Change_Password isOpen={isOpen} onClose={() => setIsOpen(false)} />
 
-                                        <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-3 text-gray-700">
+                                        <Button variant="ghost" className="w-full cursor-pointer text-left px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-3 text-gray-700">
                                             <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                                             </svg>
                                             Payment Methods
-                                        </button>
+                                        </Button>
 
-                                        <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-3 text-gray-700">
+                                        <Button variant="ghost" className="w-full text-left cursor-pointer px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-3 text-gray-700">
                                             <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                             </svg>
                                             Privacy Settings
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
                             </div>

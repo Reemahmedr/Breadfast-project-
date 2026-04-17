@@ -20,13 +20,15 @@ export default function SuccessPage() {
         confirmOrder()
     }, [])
 
+    
+
     useEffect(() => {
         const timer = setTimeout(() => {
             window.location.href = "/orders"
         }, 5000)
 
         return () => clearTimeout(timer)
-    }, [window.location.href])
+    }, [])
 
 
     return (

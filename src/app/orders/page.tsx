@@ -1,5 +1,4 @@
 "use client"
-
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useSession } from "next-auth/react"
 import { cancelOrder, getOrders } from "../apis-actions/orders/orders"
@@ -15,6 +14,9 @@ import { getInvoice } from "../apis-actions/orders/[orderId]/invoice/invoice"
 export default function page() {
 
   const statusMap: any = {
+    pending: {
+      label: "Pending",
+    },
     confirmed: {
       label: "Confirmed",
     },
@@ -34,6 +36,7 @@ export default function page() {
 
 
   const progressMap = {
+    pending: 10,
     confirmed: 25,
     shipped: 50,
     out_for_delivery: 75,
@@ -186,80 +189,82 @@ export default function page() {
                       </span>
                     </div>
                   </div>
-
-                  {/* Order Items */}
                   {item.order_items?.map((order: any) => (
-                    <div className="py-4 space-y-4">
+                    <div key={order.id} className="py-4 space-y-4">
                       <div className="flex items-center gap-4">
                         <div className="w-20 h-20 bg-linear-to-br from-purple-50 to-pink-50 rounded-xl p-2 shrink-0">
                           <div className="w-full h-full bg-gray-300 rounded-lg">
-                            <Image src={order.product_image} alt="" width={100} height={100}></Image>
+                            <Image src={order.product_image} alt="" width={100} height={100} />
                           </div>
                         </div>
                         <div className="flex-1">
                           <h3 className="font-bold text-gray-900">{order.products.name}</h3>
-                          <p className="text-sm text-gray-600">Quantity :{order.quantity}</p>
+                          <p className="text-sm text-gray-600">Quantity: {order.quantity}</p>
                           <p className="text-base font-semibold text-gray-900">{order.total_price} EGP</p>
                         </div>
                       </div>
                     </div>
                   ))}
-                  <div className="py-4 border-t border-gray-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-purple-600 font-semibold">
-                        {item.order_status === "delivered"
-                          ? `Delivered at ${new Date(item.delivered_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
-                          : `Arriving at ${new Date(item.estimated_delivery_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
-                      </span>
-                    </div>
-                    <div className="relative">
-                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div className="h-full bg-linear-to-r from-purple-600 to-pink-600 rounded-full" style={{ width: `${progressMap[item.order_status as keyof typeof progressMap]}%` }}></div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Order Actions */}
-                  {item.order_items?.map((orderItem: any) => (<div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
-                    <button onClick={() => cartMutate({
-                      user_id,
-                      product_id: orderItem.products.id,
-                      quantity: orderItem.quantity,
-                    })}
-                      className="px-6 py-2 bg-white cursor-pointer text-purple-600 font-semibold rounded-xl border-2 border-purple-200 hover:bg-purple-50 transition-all duration-200">
+                  {item.order_status !== "cancelled" && <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200 my-4">
+                    <button
+                      onClick={() => cartMutate({
+                        user_id,
+                        product_id: item.order_items?.[0]?.products.id,
+                        quantity: item.order_items?.[0]?.quantity,
+                      })}
+                      className="px-6 py-2 bg-white cursor-pointer text-purple-600 font-semibold rounded-xl border-2 border-purple-200 hover:bg-purple-50 transition-all duration-200"
+                    >
                       Buy Again
                     </button>
-                    <button onClick={async () => {
-                      try {
-                        const blob = await getInvoice({ params: { orderId: item.id } });
-
-                        const url = URL.createObjectURL(blob);
-
-                        const link = document.createElement("a");
-                        link.href = url;
-                        link.download = `invoice-${item.order_number}.pdf`;
-                        link.click();
-
-                        URL.revokeObjectURL(url);
-                        toast.success("Invoice downloaded")
-
-                      } catch (error) {
-                        console.error(error);
-                        toast.error("Failed to download invoice");
-                      }
-                    }}
-                      className="px-6 py-2 cursor-pointer bg-white text-gray-700 font-semibold rounded-xl border border-gray-200 hover:border-gray-300 transition-all duration-200">
+                    <button
+                      onClick={async () => {
+                        try {
+                          const blob = await getInvoice({ params: { orderId: item.id } });
+                          const url = URL.createObjectURL(blob);
+                          const link = document.createElement("a");
+                          link.href = url;
+                          link.download = `invoice-${item.order_number}.pdf`;
+                          link.click();
+                          URL.revokeObjectURL(url);
+                          toast.success("Invoice downloaded");
+                        } catch (error) {
+                          console.error(error);
+                          toast.error("Failed to download invoice");
+                        }
+                      }}
+                      className="px-6 py-2 cursor-pointer bg-white text-gray-700 font-semibold rounded-xl border border-gray-200 hover:border-gray-300 transition-all duration-200"
+                    >
                       Download Invoice
                     </button>
-                    {item.order_status === "confirmed" &&
-                      <button onClick={() => {
-                        console.log(item.id)
-                        return cancelMutate()
-                      }}
-                        className="px-6 py-2 cursor-pointer bg-white text-red-500 font-semibold rounded-xl border-2 border-red-200 hover:bg-red-50 hover:border-red-300 transition-all duration-200">
+                    {item.order_status === "confirmed" && (
+                      <button
+                        onClick={() => {
+                          console.log(item.id);
+                          return cancelMutate();
+                        }}
+                        className="px-6 py-2 cursor-pointer bg-white text-red-500 font-semibold rounded-xl border-2 border-red-200 hover:bg-red-50 hover:border-red-300 transition-all duration-200"
+                      >
                         Cancel Order
-                      </button>}
-                  </div>))}
+                      </button>
+                    )}
+                  </div>}
+                  <div className="py-4 border-t border-gray-200">
+                    {item.order_status !== "cancelled" &&
+                      <>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-purple-600 font-semibold">
+                            {item.order_status === "delivered"
+                              ? `Delivered at ${new Date(item.delivered_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                              : `Arriving at ${new Date(item.estimated_delivery_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+                          </span>
+                        </div>
+                        <div className="relative">
+                          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div className="h-full bg-linear-to-r from-purple-600 to-pink-600 rounded-full" style={{ width: `${progressMap[item.order_status as keyof typeof progressMap]}%` }}></div>
+                          </div>
+                        </div>
+                      </>}
+                  </div>
                 </div>))}
             </div>
 

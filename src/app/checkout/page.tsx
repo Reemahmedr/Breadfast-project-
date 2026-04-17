@@ -1,3 +1,194 @@
+// "use client"
+
+// import { Elements } from "@stripe/react-stripe-js"
+// import { stripePromise } from "@/lib/stripe-client"
+// import { useEffect, useRef, useState } from "react"
+// import CheckoutForm from "@/src/components/CheckoutForm"
+// import Loading from "@/src/components/loading"
+// import { useQuery } from "@tanstack/react-query"
+// import { useSession } from "next-auth/react"
+// import toast from "react-hot-toast"
+// import { createOrders } from "../apis-actions/orders/orders"
+// import { useSearchParams } from "next/navigation"
+// import { getAddress } from "../apis-actions/address/address"
+// import { getCheckoutPreview } from "../apis-actions/checkout/preview/preview"
+// import No_Address from "@/src/components/No_Address"
+// import { getMyDeliveryZone } from "../apis-actions/myDeliveryZone/my_delivery_zone"
+
+// export default function CheckoutPage() {
+//     const [clientSecret, setClientSecret] = useState<string | null>(null)
+//     const searchParams = useSearchParams()
+//     const promoFromUrl = searchParams.get("promo") || null
+
+//     const { data: sessionData } = useSession()
+//     const hasInitialized = useRef(false)
+
+//     const user_id = sessionData?.user?.id as string
+
+//     const { data: address, isLoading: addressIsLoading } = useQuery({ queryKey: ['getAddress'], queryFn: getAddress, enabled: !!user_id })
+
+//     const { data: deliveryZone } = useQuery({ queryKey: ['getMyDeliveryZone'], queryFn: getMyDeliveryZone, enabled: !!user_id })
+
+
+//     const { data: preview } = useQuery({
+//         queryKey: ['checkoutPreview'],
+//         queryFn: () => getCheckoutPreview(user_id, promoFromUrl as string),
+//         enabled: !!user_id
+//     })
+
+//     const defaultAddressId =
+//         address?.find((item: { id: string, is_default?: boolean }) => item.is_default)?.id
+//         ?? address?.[0]?.id
+
+//     useEffect(() => {
+//         if (!user_id || !preview || !defaultAddressId || hasInitialized.current) return;
+
+//         async function initializeCheckout() {
+//             try {
+//                 hasInitialized.current = true
+
+//                 const data = await createOrders({
+//                     user_id,
+//                     address_id: defaultAddressId,
+//                     payment_method: "card",
+//                     promo_code_id: promoFromUrl
+//                 });
+
+//                 if (!data?.clientSecret) {
+//                     throw new Error(data?.error || "Failed to initialize payment")
+//                 }
+
+//                 setClientSecret(data.clientSecret);
+//             } catch (err) {
+//                 hasInitialized.current = false
+//                 console.error("Error fetching client secret:", err);
+//                 toast.error("Failed to initialize payment");
+//             }
+//         }
+
+//         initializeCheckout();
+//     }, [defaultAddressId, preview, promoFromUrl, user_id]);
+
+//     if (addressIsLoading) {
+//         return <Loading />
+//     }
+
+//     if (!address || address.length === 0) {
+//         return <No_Address />
+//     }
+
+//     if (!clientSecret) return <Loading />
+
+//     return (
+//         <div className="min-h-screen bg-linear-to-br from-purple-50 via-pink-50 to-white py-12">
+//             <div className="mx-auto max-w-4xl px-4">
+//                 {/* Header */}
+//                 <div className="text-center mb-12">
+//                     <h1 className="text-4xl font-bold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-3">
+//                         Secure Checkout
+//                     </h1>
+//                     <p className="text-gray-600 text-lg">
+//                         Complete your purchase securely
+//                     </p>
+//                 </div>
+
+//                 <div className="grid lg:grid-cols-3 gap-8">
+//                     {/* Payment Form Section */}
+//                     <div className="lg:col-span-2">
+//                         {clientSecret && (
+//                             <Elements
+//                                 stripe={stripePromise}
+//                                 options={{
+//                                     clientSecret,
+//                                     appearance: {
+//                                         theme: 'stripe',
+//                                         variables: {
+//                                             colorPrimary: '#9333ea',
+//                                             colorBackground: '#ffffff',
+//                                             colorText: '#1f2937',
+//                                             colorDanger: '#ef4444',
+//                                             fontFamily: 'system-ui, sans-serif',
+//                                             borderRadius: '12px',
+//                                         },
+//                                     }
+//                                 }}
+//                             >
+//                                 <CheckoutForm clientSecret={clientSecret} />
+//                             </Elements>
+//                         )}
+
+//                     </div>
+
+//                     {/* Order Summary Sidebar */}
+//                     <div className="lg:col-span-1">
+//                         <div className="bg-white rounded-2xl border border-purple-100 p-6 shadow-lg sticky top-8">
+//                             <h2 className="text-xl font-bold text-gray-900 mb-6">
+//                                 Order Summary
+//                             </h2>
+
+//                             <div className="space-y-4 mb-6">
+//                                 <div className="flex items-center justify-between text-gray-600">
+//                                     <span>Subtotal</span>
+//                                     <span>{preview?.subtotal} EGP</span>
+
+//                                 </div>
+//                                 {preview?.discount > 0 && (
+//                                     <div className="flex items-center justify-between text-gray-600">
+//                                         <span>Discount</span>
+//                                         <span className="font-semibold text-green-600">-{preview.discount} EGP</span>
+//                                     </div>
+//                                 )}
+//                                 <div className="flex items-center justify-between text-gray-600">
+//                                     <span>Shipping</span>
+//                                     <span className="font-semibold text-green-600">{deliveryZone?.delivery_fee} EGP</span>
+//                                 </div>
+
+//                                 <div className="border-t border-gray-200 pt-4">
+//                                     <div className="flex items-center justify-between">
+//                                         <span className="text-lg font-bold text-gray-900">Total</span>
+//                                         <span className="text-2xl font-bold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+//                                             <span>{preview?.total + deliveryZone?.delivery_fee} EGP</span>
+//                                         </span>
+//                                     </div>
+//                                 </div>
+//                             </div>
+
+//                             {/* Security Badges */}
+//                             <div className="border-t border-gray-200 pt-6">
+//                                 <div className="space-y-3">
+//                                     <div className="flex items-center gap-3 text-sm text-gray-600">
+//                                         <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+//                                             <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+//                                             </svg>
+//                                         </div>
+//                                         <span>Secure SSL Encryption</span>
+//                                     </div>
+//                                     <div className="flex items-center gap-3 text-sm text-gray-600">
+//                                         <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+//                                             <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+//                                             </svg>
+//                                         </div>
+//                                         <span>PCI DSS Compliant</span>
+//                                     </div>
+//                                     <div className="flex items-center gap-3 text-sm text-gray-600">
+//                                         <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center shrink-0">
+//                                             <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+//                                             </svg>
+//                                         </div>
+//                                         <span>100% Money Back Guarantee</span>
+//                                     </div>
+//                                 </div>
+//                             </div>
+//                         </div>
+//                     </div>
+//                 </div>
+//             </div>
+//         </div>
+//     )
+// }
 "use client"
 
 import { Elements } from "@stripe/react-stripe-js"
@@ -5,16 +196,15 @@ import { stripePromise } from "@/lib/stripe-client"
 import { useEffect, useRef, useState } from "react"
 import CheckoutForm from "@/src/components/CheckoutForm"
 import Loading from "@/src/components/loading"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { useSession } from "next-auth/react"
-import { supabase } from "@/lib/supabase"
 import toast from "react-hot-toast"
 import { createOrders } from "../apis-actions/orders/orders"
 import { useSearchParams } from "next/navigation"
 import { getAddress } from "../apis-actions/address/address"
 import { getCheckoutPreview } from "../apis-actions/checkout/preview/preview"
-import { clearCart } from "../apis-actions/cart/cart"
 import No_Address from "@/src/components/No_Address"
+import { getMyDeliveryZone } from "../apis-actions/myDeliveryZone/my_delivery_zone"
 
 export default function CheckoutPage() {
     const [clientSecret, setClientSecret] = useState<string | null>(null)
@@ -24,99 +214,74 @@ export default function CheckoutPage() {
     const { data: sessionData } = useSession()
     const hasInitialized = useRef(false)
 
-    const queryClient = useQueryClient()
-
     const user_id = sessionData?.user?.id as string
 
-    const { mutate: createOrderMutate, isPending } = useMutation({
-        mutationFn: createOrders,
-        onSuccess: () => {
-            toast.success("Order placed successfully")
-            queryClient.invalidateQueries({ queryKey: ["getOrders", user_id] })
-        },
-        onError: () => {
-            toast.error("Failed to place order")
-        }
+    // 1. Fetch User Address
+    const { data: address, isLoading: addressIsLoading } = useQuery({
+        queryKey: ['getAddress'],
+        queryFn: getAddress,
+        enabled: !!user_id
     })
 
+    // 2. Fetch Delivery Fee
+    const { data: deliveryZone } = useQuery({
+        queryKey: ['getMyDeliveryZone'],
+        queryFn: getMyDeliveryZone,
+        enabled: !!user_id
+    })
 
-
-    const { data: address, isLoading: addressIsLoading } = useQuery({ queryKey: ['getAddress'], queryFn: getAddress, enabled: !!user_id })
-
-
+    // 3. Fetch Price Preview
     const { data: preview } = useQuery({
-        queryKey: ['checkoutPreview'],
+        queryKey: ['checkoutPreview', promoFromUrl],
         queryFn: () => getCheckoutPreview(user_id, promoFromUrl as string),
         enabled: !!user_id
     })
 
+    const defaultAddressId =
+        address?.find((item: { id: string, is_default?: boolean }) => item.is_default)?.id
+        ?? address?.[0]?.id
 
-    // useEffect(() => {
-    //     if (!user_id) return
-    //     if (!address?.length) return
-    //     if (clientSecret) return
-    //     if (hasInitialized.current) return;
-
-    //     hasInitialized.current = true;
-
-    //     async function initPaymentIntent() {
-    //         try {
-    //             const data = await createOrders({
-    //                 user_id,
-    //                 address_id: address[0].id,
-    //                 payment_method: "card",
-    //                 promo_code_id: promoFromUrl ?? null
-    //             })
-
-    //             // clearCartMutate(user_id)
-
-    //             if (!data?.clientSecret) {
-    //                 throw new Error("No client secret returned from backend")
-    //             }
-
-    //             setClientSecret(data.clientSecret)
-    //             console.log("Stripe ClientSecret:", data.clientSecret)
-    //         } catch (err) {
-    //             console.error("Checkout init error:", err)
-    //             toast.error("error in completing payment")
-    //         }
-    //     }
-
-    //     initPaymentIntent()
-    // }, [user_id, address, promoFromUrl, clientSecret])
-
+    // 4. Initialize Order/Payment Intent
     useEffect(() => {
-        if (!user_id || !preview) return;
+        // We need the user, the price preview, and an address before we can create the order
+        if (!user_id || !preview || !defaultAddressId || hasInitialized.current) return;
 
-        async function fetchClientSecret() {
+        async function initializeCheckout() {
             try {
-                const res = await fetch("/api/payment-intent", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ amount: preview.total }),
+                hasInitialized.current = true
+
+                // This creates the order in your DB and returns the Stripe clientSecret
+                const data = await createOrders({
+                    user_id,
+                    address_id: defaultAddressId,
+                    payment_method: "card",
+                    promo_code_id: promoFromUrl
                 });
-                const data = await res.json();
+
+                if (!data?.clientSecret) {
+                    throw new Error(data?.error || "Failed to initialize payment")
+                }
+
                 setClientSecret(data.clientSecret);
-            } catch (err) {
+            } catch (err: any) {
+                hasInitialized.current = false // Allow retry if it fails
                 console.error("Error fetching client secret:", err);
-                toast.error("Failed to initialize payment");
+                toast.error(err.message || "Failed to initialize payment");
             }
         }
 
-        fetchClientSecret();
-    }, [user_id, preview]);
+        initializeCheckout();
+    }, [defaultAddressId, preview, promoFromUrl, user_id]);
 
-    if (addressIsLoading) {
-        return <Loading />
-    }
+    // Handle Loading States
+    if (addressIsLoading) return <Loading />
 
     if (!address || address.length === 0) {
         return <No_Address />
     }
 
-    // if (!clientSecret) return <Loading />
-
-
+    // Wait for the clientSecret (Payment Intent) to be ready
+    if (!clientSecret) return <Loading />
 
     return (
         <div className="min-h-screen bg-linear-to-br from-purple-50 via-pink-50 to-white py-12">
@@ -134,28 +299,24 @@ export default function CheckoutPage() {
                 <div className="grid lg:grid-cols-3 gap-8">
                     {/* Payment Form Section */}
                     <div className="lg:col-span-2">
-                        {clientSecret && (
-                            <Elements
-                                stripe={stripePromise}
-                                options={{
-                                    clientSecret,
-                                    appearance: {
-                                        theme: 'stripe',
-                                        variables: {
-                                            colorPrimary: '#9333ea',
-                                            colorBackground: '#ffffff',
-                                            colorText: '#1f2937',
-                                            colorDanger: '#ef4444',
-                                            fontFamily: 'system-ui, sans-serif',
-                                            borderRadius: '12px',
-                                        },
-                                    }
-                                }}
-                            >
-                                <CheckoutForm clientSecret={clientSecret} />
-                            </Elements>
-                        )}
-
+                        <Elements
+                            stripe={stripePromise}
+                            options={{
+                                clientSecret,
+                                appearance: {
+                                    theme: 'stripe',
+                                    variables: {
+                                        colorPrimary: '#9333ea',
+                                        colorBackground: '#ffffff',
+                                        colorText: '#1f2937',
+                                        colorDanger: '#ef4444',
+                                        borderRadius: '12px',
+                                    },
+                                }
+                            }}
+                        >
+                            <CheckoutForm clientSecret={clientSecret} />
+                        </Elements>
                     </div>
 
                     {/* Order Summary Sidebar */}
@@ -169,62 +330,55 @@ export default function CheckoutPage() {
                                 <div className="flex items-center justify-between text-gray-600">
                                     <span>Subtotal</span>
                                     <span>{preview?.subtotal} EGP</span>
-
                                 </div>
+
                                 {preview?.discount > 0 && (
                                     <div className="flex items-center justify-between text-gray-600">
                                         <span>Discount</span>
                                         <span className="font-semibold text-green-600">-{preview.discount} EGP</span>
                                     </div>
                                 )}
+
                                 <div className="flex items-center justify-between text-gray-600">
                                     <span>Shipping</span>
-                                    <span className="font-semibold text-green-600">Free</span>
+                                    <span className="font-semibold text-blue-600">
+                                        {deliveryZone?.delivery_fee ?? 0} EGP
+                                    </span>
                                 </div>
 
                                 <div className="border-t border-gray-200 pt-4">
                                     <div className="flex items-center justify-between">
                                         <span className="text-lg font-bold text-gray-900">Total</span>
                                         <span className="text-2xl font-bold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                                            <span>{preview?.total} EGP</span>
+                                            {(preview?.total || 0) + (deliveryZone?.delivery_fee || 0)} EGP
                                         </span>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Security Badges */}
-                            <div className="border-t border-gray-200 pt-6">
-                                <div className="space-y-3">
-                                    <div className="flex items-center gap-3 text-sm text-gray-600">
-                                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center shrink-0">
-                                            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                            </svg>
-                                        </div>
-                                        <span>Secure SSL Encryption</span>
-                                    </div>
-                                    <div className="flex items-center gap-3 text-sm text-gray-600">
-                                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
-                                            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                            </svg>
-                                        </div>
-                                        <span>PCI DSS Compliant</span>
-                                    </div>
-                                    <div className="flex items-center gap-3 text-sm text-gray-600">
-                                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center shrink-0">
-                                            <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                                            </svg>
-                                        </div>
-                                        <span>100% Money Back Guarantee</span>
-                                    </div>
-                                </div>
+                            <div className="border-t border-gray-200 pt-6 space-y-3">
+                                <Badge icon="M5 13l4 4L19 7" label="Secure SSL Encryption" color="bg-green-100" textColor="text-green-600" />
+                                <Badge icon="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" label="PCI DSS Compliant" color="bg-blue-100" textColor="text-blue-600" />
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
+    )
+}
+
+// Helper Component for Badges
+function Badge({ icon, label, color, textColor }: { icon: string, label: string, color: string, textColor: string }) {
+    return (
+        <div className="flex items-center gap-3 text-sm text-gray-600">
+            <div className={`w-8 h-8 ${color} rounded-full flex items-center justify-center shrink-0`}>
+                <svg className={`w-4 h-4 ${textColor}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icon} />
+                </svg>
+            </div>
+            <span>{label}</span>
         </div>
     )
 }

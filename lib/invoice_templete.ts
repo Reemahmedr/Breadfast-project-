@@ -1,6 +1,8 @@
 export function invoiceTemplate(order: any) {
   const address = order.addresses;
   const items = order.order_items;
+  const shippingFees = order.total_amount - order.subtotal;
+  const subtotal = order.subtotal;
 
   return `
   <html>
@@ -8,9 +10,9 @@ export function invoiceTemplate(order: any) {
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Arial', sans-serif; background: #f9f5ff; color: #1a1a2e; }
-
+ 
         .page { max-width: 780px; margin: 40px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(107,33,168,0.10); }
-
+ 
         /* Header */
         .header { background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%); padding: 40px 48px 32px; color: white; }
         .header-top { display: flex; justify-content: space-between; align-items: center; }
@@ -25,19 +27,19 @@ export function invoiceTemplate(order: any) {
         .header-meta { display: flex; gap: 40px; }
         .meta-item .label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.7; }
         .meta-item .value { font-size: 14px; font-weight: 600; margin-top: 3px; }
-
+ 
         /* Body */
         .body { padding: 40px 48px; }
-
+ 
         /* Section title */
         .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #9333ea; font-weight: 700; margin-bottom: 12px; }
-
+ 
         /* Address */
         .address-box { background: #faf5ff; border: 1px solid #e9d5ff; border-left: 4px solid #9333ea; border-radius: 10px; padding: 18px 22px; margin-bottom: 36px; }
         .address-box .name { font-size: 14px; font-weight: 700; color: #1a1a2e; margin-bottom: 6px; text-transform: capitalize; }
         .address-box p { font-size: 13px; color: #4b5563; line-height: 1.9; text-transform: capitalize; }
         .address-box .phone { margin-top: 8px; font-size: 13px; color: #9333ea; font-weight: 600; }
-
+ 
         /* Table */
         table { width: 100%; border-collapse: collapse; margin-bottom: 32px; border-radius: 12px; overflow: hidden; }
         thead tr { background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%); }
@@ -50,14 +52,18 @@ export function invoiceTemplate(order: any) {
         tbody td:last-child { text-align: right; font-weight: 700; color: #1a1a2e; }
         .product-name { font-weight: 600; color: #1a1a2e; }
         .qty-badge { display: inline-block; background: #f3e8ff; color: #9333ea; font-weight: 700; font-size: 12px; padding: 2px 10px; border-radius: 20px; }
-
+ 
         /* Totals */
         .totals { display: flex; justify-content: flex-end; margin-bottom: 36px; }
-        .totals-box { width: 300px; background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 12px; overflow: hidden; }
-        .totals-row { display: flex; justify-content: space-between; padding: 12px 20px; font-size: 14px; color: #6b7280; border-bottom: 1px solid #f3e8ff; }
-        .totals-row:last-child { border-bottom: none; background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%); }
-        .totals-row.grand-total { color: white; font-size: 17px; font-weight: 800; padding: 16px 20px; }
-
+        .totals-box { width: 320px; background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 12px; overflow: hidden; }
+        .totals-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; font-size: 14px; color: #6b7280; border-bottom: 1px solid #f3e8ff; }
+        .totals-row:last-child { border-bottom: none; }
+        .totals-row.shipping { color: #374151; }
+        .totals-row.shipping .shipping-icon { font-size: 13px; margin-right: 6px; }
+        .totals-row.shipping .free-badge { background: #d1fae5; color: #065f46; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; letter-spacing: 0.5px; text-transform: uppercase; }
+        .totals-row.divider-row { padding: 0; border-bottom: 1px solid #e9d5ff; }
+        .totals-row.grand-total { background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%); color: white; font-size: 17px; font-weight: 800; padding: 16px 20px; }
+ 
         /* Footer */
         .footer { background: linear-gradient(135deg, #faf5ff 0%, #fdf2f8 100%); border-top: 1px solid #e9d5ff; padding: 24px 48px; display: flex; justify-content: space-between; align-items: center; }
         .footer-note { font-size: 13px; color: #9ca3af; }
@@ -66,7 +72,7 @@ export function invoiceTemplate(order: any) {
     </head>
     <body>
       <div class="page">
-
+ 
         <!-- Header -->
         <div class="header">
           <div class="header-top">
@@ -94,10 +100,10 @@ export function invoiceTemplate(order: any) {
             </div>
           </div>
         </div>
-
+ 
         <!-- Body -->
         <div class="body">
-
+ 
           <!-- Address -->
           <div class="section-title">Delivery Address</div>
           <div class="address-box">
@@ -110,7 +116,7 @@ export function invoiceTemplate(order: any) {
             </p>
             <p class="phone">📞 ${address?.phone}</p>
           </div>
-
+ 
           <!-- Items -->
           <div class="section-title">Order Items</div>
           <table>
@@ -133,25 +139,36 @@ export function invoiceTemplate(order: any) {
               `).join("")}
             </tbody>
           </table>
-
+ 
           <!-- Totals -->
           <div class="totals">
             <div class="totals-box">
+              <div class="totals-row">
+                <span>Subtotal</span>
+                <span>${subtotal} EGP</span>
+              </div>
+              <div class="totals-row shipping">
+                <span><span class="shipping-icon">🚚</span> Shipping Fees</span>
+                ${shippingFees === 0
+      ? `<span class="free-badge">Free</span>`
+      : `<span>${shippingFees} EGP</span>`
+    }
+              </div>
               <div class="totals-row grand-total">
                 <span>Total Amount</span>
                 <span>${order.total_amount} EGP</span>
               </div>
             </div>
           </div>
-
+ 
         </div>
-
+ 
         <!-- Footer -->
         <div class="footer">
           <span class="footer-note">Thank you for choosing breadfast ❤️</span>
           <span class="footer-brand">breadfast © ${new Date().getFullYear()}</span>
         </div>
-
+ 
       </div>
     </body>
   </html>

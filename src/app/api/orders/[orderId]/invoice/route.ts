@@ -5,7 +5,7 @@ import { authOptions } from "@/src/auth";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
-export async function GET(req: Request, { params }: { params: Promise<{ orderId: string }> }) {
+export async function GET({ params }: { params: Promise<{ orderId: string }> }) {
     const { orderId } = await params;
 
     const session = await getServerSession(authOptions);

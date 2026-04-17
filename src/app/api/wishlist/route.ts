@@ -1,4 +1,3 @@
-import { supabase } from "@/lib/supabase";
 import { supabaseServer } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
@@ -43,6 +42,12 @@ export async function POST(req: Request) {
         console.error("API ERROR:", error)
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    await supabaseServer.from("notifications").insert({
+        user_id,
+        title: "Wishlist Update",
+        message: "Your wishlist had a new item",
+    });
 
     return NextResponse.json(data, { status: 201 });
 }

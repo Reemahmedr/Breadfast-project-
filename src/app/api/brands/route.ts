@@ -1,7 +1,7 @@
 import { supabaseServer } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
-export async function GET(req:Request) {
+export async function GET() {
     const {data , error} = await supabaseServer
     .from("brands")
     .select("*")

@@ -116,5 +116,11 @@ export async function PUT(req: Request) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    await supabaseServer.from("notifications").insert({
+        user_id: userId,
+        title: "Profile Changed",
+        message: "Your profile was updated successfully",
+    });
+
     return NextResponse.json({ profile: data });
 }

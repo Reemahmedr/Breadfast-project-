@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { supabaseServer } from "@/lib/supabase-server";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 
@@ -24,6 +25,12 @@ export async function POST(req: Request) {
     if (!isValid) {
         return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
+
+    await supabaseServer.from("notifications").insert({
+        user_id: user.id,
+        title: "Logged in",
+        message: "Your login was successfull",
+    });
     return NextResponse.json({
         id: user.id,
         email: user.email,

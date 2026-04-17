@@ -27,9 +27,9 @@ export default function page() {
     }
   })
 
-  const { mutate: registerMutate, data } = useMutation({
+  const { mutate: registerMutate } = useMutation({
     mutationFn: registerUser,
-    onSuccess: async (data, variables) => {
+    onSuccess: async (variables) => {
       toast.success("Successfull Register")
       await signIn("credentials", {
         email: variables.email,

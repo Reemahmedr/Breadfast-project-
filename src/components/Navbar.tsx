@@ -7,11 +7,14 @@ import Link from "next/link"
 import { useState } from "react"
 import { getCart } from "../app/apis-actions/cart/cart"
 import { getWishlish } from "../app/apis-actions/wishlist/wishlist"
+import Notifications from "./Notifications"
+import GetNotifications from "../app/apis-actions/notification/notification"
 
 
 export default function Navbar() {
     const [toggle, isToggle] = useState(false)
     const [isProfileOpen, setIsProfileOpen] = useState(false)
+    const [IsNotifOpen, setIsNotifOpen] = useState(false)
     const { data: session, status } = useSession()
     const { data: cartData } = useQuery({
         queryKey: ["getCart", session?.user?.id],
@@ -23,6 +26,13 @@ export default function Navbar() {
         queryKey: ['getWishlist', session?.user.id],
         queryFn: () => getWishlish(session!.user!.id),
         enabled: !!session,
+    })
+
+    const unreadCount = useQuery({
+        queryKey: ["notification-count"],
+        queryFn: GetNotifications,
+        select: (data) =>
+            data.filter((n: any) => !n.is_read).length
     })
 
     const cartCount =
@@ -138,6 +148,30 @@ export default function Navbar() {
                             </li>
                             <li className="relative">
                                 <button
+                                    onClick={() => setIsNotifOpen(prev => !prev)}
+                                    className="block py-2 px-3 md:p-0 cursor-pointer"
+                                >
+                                    <i className="fa-regular fa-bell text-fg-brand text-2xl" />
+
+                                    {unreadCount.data > 0 ? (
+                                        <span className="absolute -top-2 -right-2 bg-[#8B3A8F] text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                                            {unreadCount.data}
+                                        </span>
+                                    ) : (
+                                        <span className="absolute -top-2 -right-2 bg-[#8B3A8F] text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                                            0
+                                        </span>
+                                    )}
+                                </button>
+
+                                {IsNotifOpen && (
+                                    <div className="absolute right-0 mt-2 z-50">
+                                        <Notifications onClose={() => setIsNotifOpen(false)} />
+                                    </div>
+                                )}
+                            </li>
+                            <li className="relative">
+                                <button
                                     onClick={() => setIsProfileOpen(!isProfileOpen)}
                                     className="block py-2 px-3 md:p-0 cursor-pointer"
                                 >
@@ -185,24 +219,6 @@ export default function Navbar() {
                                             <span className="font-medium">My Addresses</span>
                                         </Link>
 
-                                        {/* <Link
-                                            href="/orders"
-                                            className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition-colors"
-                                            onClick={() => setIsProfileOpen(false)}
-                                        >
-                                            <svg
-                                                className="w-5 h-5"
-                                                fill="currentColor"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path
-                                                    fillRule="evenodd"
-                                                    d="M5.617 2.076a1 1 0 0 1 1.09.217L8 3.586l1.293-1.293a1 1 0 0 1 1.414 0L12 3.586l1.293-1.293a1 1 0 0 1 1.414 0L16 3.586l1.293-1.293A1 1 0 0 1 19 3v18a1 1 0 0 1-1.707.707L16 20.414l-1.293 1.293a1 1 0 0 1-1.414 0L12 20.414l-1.293 1.293a1 1 0 0 1-1.414 0L8 20.414l-1.293 1.293A1 1 0 0 1 5 21V3a1 1 0 0 1 .617-.924ZM9 7a1 1 0 0 0 0 2h6a1 1 0 1 0 0-2H9Zm0 4a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2H9Zm0 4a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2H9Z"
-                                                    clipRule="evenodd"
-                                                />
-                                            </svg>
-                                            <span className="font-medium">My Orders</span>
-                                        </Link> */}
 
                                         <div className="border-t border-gray-100 my-2"></div>
 

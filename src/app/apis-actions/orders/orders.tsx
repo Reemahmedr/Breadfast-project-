@@ -3,7 +3,6 @@ export type Order = {
     address_id: string,
     payment_method: string
     promo_code_id?: string | null
-    payment_intent_id: string
 }
 
 

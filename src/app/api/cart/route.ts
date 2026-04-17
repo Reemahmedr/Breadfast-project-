@@ -47,6 +47,12 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    await supabaseServer.from("notifications").insert({
+        user_id,
+        title: "Cart Update",
+        message: "Your product was addedd to cart successfully",
+    });
+
     return NextResponse.json(data, { status: 201 });
 }
 

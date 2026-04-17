@@ -89,7 +89,7 @@ export async function POST(req: Request) {
         ...(body.landmark && { landmark: body.landmark }),
     }
 
-    
+
 
     const { data, error } = await supabaseServer
         .from("addresses")
@@ -99,6 +99,12 @@ export async function POST(req: Request) {
     if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    await supabaseServer.from("notifications").insert({
+        user_id: userId,
+        title: "Address Addedd",
+        message: "Your new address was addedd successfully",
+    });
 
     return NextResponse.json(data, { status: 201 })
 
