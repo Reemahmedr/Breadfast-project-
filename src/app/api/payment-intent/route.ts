@@ -46,27 +46,4 @@ export async function POST(req: Request) {
         amount
     })
 
-
-
-
-
-
-
-
-
-
-
-
-
-    // const { amount } = await req.json()
-
-    // const paymentIntent = await stripe.paymentIntents.create({
-    //     amount: Math.round(amount * 100),
-    //     currency: "egp",
-    //     automatic_payment_methods: { enabled: true }
-    // })
-
-    // return NextResponse.json({
-    //     clientSecret: paymentIntent.client_secret
-    // })
 }

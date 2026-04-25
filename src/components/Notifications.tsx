@@ -3,9 +3,9 @@
 
 import { useQuery } from "@tanstack/react-query"
 import GetNotifications from "../app/apis-actions/notification/notification"
-import Loading from "./loading"
 import { formatDistanceToNow } from "date-fns"
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 export default function Notifications({ onClose }: { onClose: () => void }) {
 
@@ -126,9 +126,9 @@ export default function Notifications({ onClose }: { onClose: () => void }) {
 
             {/* Footer */}
             <div className="mt-5 flex items-center justify-center gap-1.5">
-                <Button onClick={onClose} className="text-sm cursor-pointer font-semibold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                <Link href="/notifications" onClick={onClose} className="text-sm cursor-pointer font-semibold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                     View all notifications
-                </Button>
+                </Link>
                 <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                     <path d="M19 12H5m14 0-4 4m4-4-4-4" />
                 </svg>

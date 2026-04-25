@@ -208,35 +208,40 @@ export async function POST(req: Request) {
             })
     }
 
-    let paymentIntent
-    try {
-        paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(totalAmount * 100),
-            currency: "egp",
-            automatic_payment_methods: { enabled: true },
-            metadata: {
-                order_id: String(order.id),
-                user_id: String(user_id),
-                ...(resolvedPromoId != null
-                    ? { promo_id: String(resolvedPromoId) }
-                    : {}),
-            },
-        })
-    } catch (stripeErr: unknown) {
-        const message =
-            stripeErr instanceof Error ? stripeErr.message : "Payment setup failed"
-        console.error("Stripe payment intent error:", stripeErr)
-        return NextResponse.json({ error: message }, { status: 502 })
+    let paymentIntent = null
+    if (payment_method === "card") {
+        try {
+            paymentIntent = await stripe.paymentIntents.create({
+                amount: Math.round(totalAmount * 100),
+                currency: "egp",
+                automatic_payment_methods: { enabled: true },
+                metadata: {
+                    order_id: String(order.id),
+                    user_id: String(user_id),
+                    ...(resolvedPromoId != null
+                        ? { promo_id: String(resolvedPromoId) }
+                        : {}),
+                },
+            })
+        }
+        catch (stripeErr: unknown) {
+            const message =
+                stripeErr instanceof Error ? stripeErr.message : "Payment setup failed"
+            console.error("Stripe payment intent error:", stripeErr)
+            return NextResponse.json({ error: message }, { status: 502 })
+        }
     }
 
-    const { error: linkPiError } = await supabaseServer
-        .from("orders")
-        .update({ payment_intent_id: paymentIntent.id })
-        .eq("id", order.id)
-
-    if (linkPiError) {
-        console.error("Failed to attach payment_intent_id to order:", linkPiError)
+    if (payment_method === "card" && paymentIntent) {
+        await supabaseServer
+            .from("orders")
+            .update({ payment_intent_id: paymentIntent.id })
+            .eq("id", order.id)
     }
+
+    // if (linkPiError) {
+    //     console.error("Failed to attach payment_intent_id to order:", linkPiError)
+    // }
 
     const { data, error } = await supabaseServer
         .from("notifications")
@@ -254,7 +259,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
         order,
-        clientSecret: paymentIntent.client_secret
+        clientSecret: paymentIntent?.client_secret ?? null
     }, { status: 201 })
 }
 export async function PUT(req: Request) {
