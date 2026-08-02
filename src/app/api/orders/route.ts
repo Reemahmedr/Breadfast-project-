@@ -43,14 +43,6 @@ export async function POST(req: Request) {
         )
     }
 
-    console.log("ORDER BODY:", body)
-
-    if (!user_id || !address_id || !payment_method) {
-        return NextResponse.json(
-            { error: "missing required fields" },
-            { status: 400 }
-        )
-    }
 
     const { data: cart, error: cartError } = await supabaseServer
         .from("cart_items")
@@ -62,7 +54,6 @@ export async function POST(req: Request) {
     }
 
     if (!cart || cart.length === 0) {
-        console.log("CART EMPTY");
         return NextResponse.json(
             { error: "cart is empty" },
             { status: 400 }
@@ -126,23 +117,49 @@ export async function POST(req: Request) {
 
     const { data: address, error: addressError } = await supabaseServer
         .from("addresses")
-        .select("delivery_zone_id")
+        .select("delivery_zone_id, area")
         .eq("id", address_id)
         .single()
 
     if (addressError || !address) {
-        console.log("address EMPTY");
         return NextResponse.json({ error: "Invalid address" }, { status: 400 })
+    }
+
+    let deliveryZoneId = address.delivery_zone_id as string | null
+
+    // Older addresses may be missing delivery_zone_id — resolve from area
+    if (!deliveryZoneId && address.area) {
+        const { data: zoneArea } = await supabaseServer
+            .from("delivery_zone_areas")
+            .select("delivery_zone_id")
+            .eq("area", address.area)
+            .limit(1)
+            .maybeSingle()
+
+        deliveryZoneId = zoneArea?.delivery_zone_id ?? null
+
+        if (deliveryZoneId) {
+            await supabaseServer
+                .from("addresses")
+                .update({ delivery_zone_id: deliveryZoneId })
+                .eq("id", address_id)
+        }
+    }
+
+    if (!deliveryZoneId) {
+        return NextResponse.json(
+            { error: "Delivery zone not found for this address. Please update your address area." },
+            { status: 400 }
+        )
     }
 
     const { data: zone, error: zoneError } = await supabaseServer
         .from("delivery_zones")
         .select("estimated_delivery_time, delivery_fee")
-        .eq("id", address.delivery_zone_id)
+        .eq("id", deliveryZoneId)
         .single()
 
     if (zoneError || !zone) {
-        console.log("zone EMPTY");
         return NextResponse.json({ error: "Delivery zone not found" }, { status: 400 })
     }
 
@@ -151,6 +168,19 @@ export async function POST(req: Request) {
     const totalAmount = total + deliveryFee
 
 
+
+    // Drop abandoned unpaid card checkouts (selected card then switched/left)
+    // Do NOT cancel COD orders — those stay pending until delivery.
+    await supabaseServer
+        .from("orders")
+        .update({
+            order_status: "cancelled",
+            cancelled_at: new Date().toISOString(),
+        })
+        .eq("user_id", user_id)
+        .eq("payment_method", "card")
+        .eq("order_status", "pending")
+        .eq("payment_status", "pending")
 
     const { data: order, error: orderError } = await supabaseServer
         .from("orders")
@@ -170,7 +200,6 @@ export async function POST(req: Request) {
         .single()
 
     if (orderError) {
-        console.error("ORDER ERROR:", orderError)
         return NextResponse.json({ error: orderError.message }, { status: 500 })
     }
 
@@ -189,7 +218,6 @@ export async function POST(req: Request) {
         .insert(orderItems)
 
     if (itemsError) {
-        console.log("ORDER ITEMS:", orderItems)
         return NextResponse.json({ error: itemsError.message }, { status: 500 })
     }
 
@@ -227,7 +255,7 @@ export async function POST(req: Request) {
         catch (stripeErr: unknown) {
             const message =
                 stripeErr instanceof Error ? stripeErr.message : "Payment setup failed"
-            console.error("Stripe payment intent error:", stripeErr)
+
             return NextResponse.json({ error: message }, { status: 502 })
         }
     }
@@ -239,9 +267,6 @@ export async function POST(req: Request) {
             .eq("id", order.id)
     }
 
-    // if (linkPiError) {
-    //     console.error("Failed to attach payment_intent_id to order:", linkPiError)
-    // }
 
     const { data, error } = await supabaseServer
         .from("notifications")
@@ -254,7 +279,6 @@ export async function POST(req: Request) {
         })
         .select();
 
-    console.log(data, error);
 
 
     return NextResponse.json({
@@ -296,7 +320,6 @@ export async function PUT(req: Request) {
             .update({ order_status: "cancelled", cancelled_at: new Date() })
             .eq("id", order_id);
 
-        console.log("cancelledOrder:", data, "cancelError:", error);
 
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 });

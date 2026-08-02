@@ -28,7 +28,6 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { user_id, product_id, quantity } = body
 
-    console.log("CART BODY:", body)
 
 
     if (!user_id || !product_id || !quantity) {
@@ -43,7 +42,6 @@ export async function POST(req: Request) {
         .insert([{ user_id, product_id, quantity }])
 
     if (error) {
-        console.error("API ERROR:", error)
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 

@@ -40,7 +40,6 @@ export default function page() {
   })
 
   function onSubmit(data: RegisterData) {
-    console.log(data)
     registerMutate(data)
   }
 

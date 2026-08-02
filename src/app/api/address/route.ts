@@ -49,7 +49,7 @@ export async function POST(req: Request) {
         .select("delivery_zone_id")
         .eq("area", body.area)
         .limit(1)
-        .single()
+        .maybeSingle()
 
 
 
@@ -137,9 +137,21 @@ export async function PUT(req: Request) {
             .eq("user_id", userId)
     }
 
+    let delivery_zone_id = rest.delivery_zone_id as string | null | undefined
+    if (rest.area) {
+        const { data: zone } = await supabaseServer
+            .from("delivery_zone_areas")
+            .select("delivery_zone_id")
+            .eq("area", rest.area)
+            .limit(1)
+            .maybeSingle()
+
+        delivery_zone_id = zone?.delivery_zone_id ?? null
+    }
+
     const { data, error } = await supabaseServer
         .from("addresses")
-        .update({ is_default, ...rest })
+        .update({ is_default, ...rest, ...(delivery_zone_id !== undefined ? { delivery_zone_id } : {}) })
         .eq("id", address_id)
         .eq("user_id", userId)
         .select()

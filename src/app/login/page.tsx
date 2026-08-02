@@ -29,7 +29,6 @@ export default function LoginForm() {
     // })
 
     async function onSubmit(data: LoginData) {
-        console.log(data)
         const res = await signIn("credentials", {
             redirect: false,
             email: data.email,

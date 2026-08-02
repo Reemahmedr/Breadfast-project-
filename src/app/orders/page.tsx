@@ -59,7 +59,6 @@ export default function page() {
     enabled: !!user_id
   })
 
-  console.log("ORDERS:", orderData)
   const sortedOrders = [...orderData].sort(
     (a: any, b: any) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -228,7 +227,6 @@ export default function page() {
                           URL.revokeObjectURL(url);
                           toast.success("Invoice downloaded");
                         } catch (error) {
-                          console.error(error);
                           toast.error("Failed to download invoice");
                         }
                       }}
@@ -239,7 +237,6 @@ export default function page() {
                     {item.order_status === "confirmed" && (
                       <button
                         onClick={() => {
-                          console.log(item.id);
                           return cancelMutate();
                         }}
                         className="px-6 py-2 cursor-pointer bg-white text-red-500 font-semibold rounded-xl border-2 border-red-200 hover:bg-red-50 hover:border-red-300 transition-all duration-200"

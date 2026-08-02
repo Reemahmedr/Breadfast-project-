@@ -13,19 +13,44 @@ export async function GET() {
 
     const { data: address } = await supabaseServer
         .from("addresses")
-        .select("delivery_zone_id")
+        .select("delivery_zone_id, area")
         .eq("user_id", userId)
         .eq("is_default", true)
-        .single();
+        .maybeSingle();
 
     if (!address) {
         return NextResponse.json({ error: "Address not found" }, { status: 404 });
     }
 
+    let deliveryZoneId = address.delivery_zone_id as string | null;
+
+    if (!deliveryZoneId && address.area) {
+        const { data: zoneArea } = await supabaseServer
+            .from("delivery_zone_areas")
+            .select("delivery_zone_id")
+            .eq("area", address.area)
+            .limit(1)
+            .maybeSingle();
+
+        deliveryZoneId = zoneArea?.delivery_zone_id ?? null;
+
+        if (deliveryZoneId) {
+            await supabaseServer
+                .from("addresses")
+                .update({ delivery_zone_id: deliveryZoneId })
+                .eq("user_id", userId)
+                .eq("is_default", true);
+        }
+    }
+
+    if (!deliveryZoneId) {
+        return NextResponse.json({ error: "Delivery zone not found" }, { status: 404 });
+    }
+
     const { data: zone } = await supabaseServer
         .from("delivery_zones")
         .select("delivery_fee, min_order_amount")
-        .eq("id", address.delivery_zone_id)
+        .eq("id", deliveryZoneId)
         .single();
 
     return NextResponse.json(zone);

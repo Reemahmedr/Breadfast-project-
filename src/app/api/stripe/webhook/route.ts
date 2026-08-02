@@ -26,17 +26,12 @@ export async function POST(req: Request) {
     } catch (err) {
         return new Response("Webhook Error", { status: 400 })
     }
-    console.log("🔥 EVENT TYPE:", event.type)
     if (event.type === "payment_intent.succeeded") {
         const intent = event.data.object as Stripe.PaymentIntent
         const orderId = intent.metadata.order_id
-        console.log("💳 INTENT ID:", intent.id)
-        console.log("📦 METADATA:", intent.metadata)
         if (!orderId) {
-            console.log("❌ No order_id in metadata")
             return new Response("No order_id", { status: 200 })
         }
-        console.log("🆔 ORDER ID FROM METADATA:", orderId)
 
         const { data, error } = await supabaseServer
             .from("orders")
@@ -47,10 +42,6 @@ export async function POST(req: Request) {
                 payment_intent_id: intent.id,
             })
             .eq("id", orderId)
-
-        console.log("ORDER ID FROM METADATA:", orderId)
-        console.log("UPDATED ROWS:", data)
-        console.log("ERROR:", error)
     }
 
 

@@ -40,8 +40,13 @@ export async function createOrders(order_item: Order) {
         body: JSON.stringify(order_item),
     })
 
+    const data = await res.json()
 
-    return res.json()
+    if (!res.ok) {
+        throw new Error(data?.error || "Failed to create order")
+    }
+
+    return data
 }
 
 export async function cancelOrder(order_id: string, order_status: string) {

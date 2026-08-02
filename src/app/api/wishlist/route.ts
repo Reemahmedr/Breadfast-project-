@@ -39,7 +39,6 @@ export async function POST(req: Request) {
         .insert({ user_id, product_id })
 
     if (error) {
-        console.error("API ERROR:", error)
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -58,7 +57,6 @@ export async function DELETE(req: Request) {
     const user_id = searchParams.get("user_id")
     const product_id = searchParams.get("product_id")
 
-    console.log("DELETE wishlist:", { user_id, product_id })
 
 
     if (!user_id) {

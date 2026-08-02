@@ -11,7 +11,6 @@ import Image from "next/image"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import Change_Password from "@/src/components/Change_Password"
-import Notifications from "@/src/components/Notifications"
 
 export default function page() {
 

@@ -20,7 +20,6 @@ export default function page() {
 
     const user_id = sessionData?.user?.id as string
 
-    console.log("UserId", user_id)
 
     const [promoCode, setPromoCode] = useState("")
     const [discount, setDiscount] = useState(0)
@@ -85,7 +84,6 @@ export default function page() {
             setPromoId(data.promoId)
         },
         onError: (error: any) => {
-            console.log("Promo error:", error.message)
             toast.error(error.message)
         }
 

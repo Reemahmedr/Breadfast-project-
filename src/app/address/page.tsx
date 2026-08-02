@@ -9,8 +9,9 @@ import Loading from "@/src/components/loading"
 import { getDeliveryZone } from "../apis-actions/delivery-zone/delivery_zone"
 import { useSearchParams } from "next/navigation"
 import { useRouter } from "next/navigation"
+import { Suspense } from "react"
 
-export default function page() {
+function AddressPageContent() {
 
     const { register, handleSubmit, reset, formState: { errors } } = useForm<Address>()
     const [isFormOpen, setIsFormOpen] = useState(false)
@@ -46,7 +47,6 @@ export default function page() {
         queryFn: getDeliveryZone
     })
 
-    console.log("DELIVERY DATA:", DeliveryZoneData)
 
     const groupedZones = DeliveryZoneData?.reduce((acc: any, row: any) => {
         const city = row.delivery_zones?.city
@@ -587,5 +587,13 @@ export default function page() {
                 </div>
             )}
         </div>
+    )
+}
+
+export default function page() {
+    return (
+        <Suspense fallback={<Loading />}>
+            <AddressPageContent />
+        </Suspense>
     )
 }

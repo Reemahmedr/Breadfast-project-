@@ -1,7 +1,7 @@
 "use client"
 import logo from "@/public/breadfast-circle.png"
-import { useQuery } from "@tanstack/react-query"
-import { useSession } from "next-auth/react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { signOut, useSession } from "next-auth/react"
 import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
@@ -16,6 +16,7 @@ export default function Navbar() {
     const [isProfileOpen, setIsProfileOpen] = useState(false)
     const [IsNotifOpen, setIsNotifOpen] = useState(false)
     const { data: session, status } = useSession()
+    const queryClient = useQueryClient()
     const { data: cartData } = useQuery({
         queryKey: ["getCart", session?.user?.id],
         queryFn: () => getCart(session!.user!.id),
@@ -35,6 +36,13 @@ export default function Navbar() {
             data.filter((n: any) => !n.is_read).length
     })
 
+    async function handleLogout() {
+        await signOut({
+            callbackUrl: "/"
+        })
+        queryClient.clear()
+    }
+
     const cartCount =
         cartData?.reduce((sum: number, item: any) => sum + item.quantity, 0) ?? 0
 
@@ -45,7 +53,6 @@ export default function Navbar() {
 
     const islogged = !!session
 
-    console.log(islogged)
 
     if (status === "loading") return null;
 
@@ -225,7 +232,7 @@ export default function Navbar() {
                                         <button
                                             onClick={() => {
                                                 setIsProfileOpen(false)
-                                                // Add your logout logic here
+                                                handleLogout()
                                             }}
                                             className="w-full flex cursor-pointer items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 transition-colors"
                                         >
